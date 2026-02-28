@@ -1,1 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Futbol Analiz Motoru</title>
+<style>
+body { font-family: Arial; background:#111; color:white; padding:20px;}
+h1 { text-align:center; }
+.card { background:#1e1e1e; padding:15px; margin-bottom:15px; border-radius:8px;}
+.green { color:#00ff99; }
+.red { color:#ff4d4d; }
+.yellow { color:#ffd633; }
+</style>
+</head>
+<body>
 
+<h1>Canlı Maç Analizleri</h1>
+<div id="matches"></div>
+
+<script>
+async function loadMatches() {
+  const res = await fetch("/api/matches");
+  const data = await res.json();
+
+  const container = document.getElementById("matches");
+  container.innerHTML = "";
+
+  data.forEach(match => {
+    let riskColor = "yellow";
+    if(match.risk === "Düşük") riskColor = "green";
+    if(match.risk === "Yüksek") riskColor = "red";
+
+    container.innerHTML += `
+      <div class="card">
+        <h3>${match.home} vs ${match.away}</h3>
+        <p>Skor: ${match.score}</p>
+        <p>Dakika: ${match.minute}</p>
+        <p>Ev Kazanma: %${match.homeProb}</p>
+        <p>Beraberlik: %${match.drawProb}</p>
+        <p>Deplasman: %${match.awayProb}</p>
+        <p class="${riskColor}">Risk: ${match.risk}</p>
+      </div>
+    `;
+  });
+}
+
+loadMatches();
+setInterval(loadMatches, 30000);
+</script>
+
+</body>
+</html>
