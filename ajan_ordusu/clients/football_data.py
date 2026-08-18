@@ -62,7 +62,8 @@ class FootballDataClient:
         return response.json()
 
     def get_competition_teams(self, competition_code: str) -> List[Dict[str, Any]]:
-        """Örn. competition_code='PL' (Premier League), 'TR1' (Süper Lig, kapsam değişebilir)."""
+        """Örn. competition_code='PL' (Premier League), 'TSL' (Süper Lig, kapsam değişebilir —
+        ücretsiz planda mevcut olmayabilir, bkz. https://docs.football-data.org/general/v4/policies.html)."""
         return self._get(f"/competitions/{competition_code}/teams").get("teams", [])
 
     def get_competition_matches(

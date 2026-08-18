@@ -10,19 +10,19 @@ def test_auto_output_filename_is_deterministic():
 
 def test_bulletin_auto_fills_in_next_n_and_output():
     parser = build_parser()
-    args = parser.parse_args(["--bulletin-auto", "--competition", "TR1"])
+    args = parser.parse_args(["--bulletin-auto", "--competition", "TSL"])
 
     apply_bulletin_auto_defaults(args, parser)
 
     assert args.bulletin is True
     assert args.next_n == config.DEFAULT_AUTO_BULLETIN_NEXT_N
-    assert args.output == _auto_output_filename("TR1")
+    assert args.output == _auto_output_filename("TSL")
 
 
 def test_bulletin_auto_respects_explicit_next_and_output():
     parser = build_parser()
     args = parser.parse_args(
-        ["--bulletin-auto", "--competition", "TR1", "--next", "5", "--output", "ozel.md"]
+        ["--bulletin-auto", "--competition", "TSL", "--next", "5", "--output", "ozel.md"]
     )
 
     apply_bulletin_auto_defaults(args, parser)
