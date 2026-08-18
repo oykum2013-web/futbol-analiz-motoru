@@ -16,8 +16,8 @@ analiz eden ve olasılık tabanlı tahmin üreten bir sistem.
   - Rapor & Bülten (`agents/bulletin.py`) — birden çok maçın sonucunu günlük/haftalık bültene dönüştürür;
     her maç için güven düzeyini, eksik veri uyarılarını ("VERİ YOK"/"Yetersiz Veri") ve risk uyarısını gösterir
   - `api.py` — n8n gibi orkestrasyon araçlarının çağırabilmesi için ince bir FastAPI HTTP sarmalayıcısı
-- **`n8n/`** — self-hosted n8n'e import edilecek workflow tanımı: günlük zamanlanmış çalıştırma,
-  `api.py`'yi çağırıp bülteni bir Markdown dosyasına yazar (bkz. `n8n/README.md`)
+- **`n8n/`** — n8n'e import edilecek iki workflow tanımı (self-hosted: dosyaya yazar; n8n Cloud:
+  e-posta ile gönderir), `api.py`'yi günlük tetikler (bkz. `n8n/README.md`)
 - **`index.html` + `api/matches.js`** — ayrı, mevcut basit JS/Vercel canlı skor arayüzü (ajan ordusundan bağımsız)
 
 ## Veri bütünlüğü kuralı (kesin)
