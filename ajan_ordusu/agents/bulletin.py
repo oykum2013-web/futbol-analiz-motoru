@@ -14,8 +14,9 @@ telafi etmez — sadece alttaki ajanların (form, H2H, kadro, piyasa, tahmin)
 zaten ürettiği gerçek sonuçları/uyarıları biçimlendirir.
 """
 
+from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from .orchestrator import MatchAnalysisReport
 
@@ -45,6 +46,40 @@ def _data_gaps(report: MatchAnalysisReport) -> List[str]:
     if not report.market.data_available:
         gaps.append("Oran/piyasa verisi yok")
     return gaps
+
+
+def to_bulletin_dict(
+    reports: List[MatchAnalysisReport],
+    title: Optional[str] = None,
+    generated_at: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Bültenin yapılandırılmış (JSON'a uygun) hâli — HTTP API için.
+
+    Alttaki ajanların ürettiği gerçek verileri/uyarıları olduğu gibi taşır;
+    `markdown` alanı, `format_bulletin_markdown` ile üretilen aynı metni içerir
+    (n8n gibi araçların doğrudan bir dosyaya yazabilmesi için).
+    """
+    generated_at = generated_at or datetime.now(timezone.utc)
+    return {
+        "title": title or "Günlük Tahmin Bülteni",
+        "generated_at": generated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "risk_warning": RISK_WARNING,
+        "match_count": len(reports),
+        "matches": [
+            {
+                "home": asdict(report.prediction.home),
+                "away": asdict(report.prediction.away),
+                "form": {"home": asdict(report.home_form), "away": asdict(report.away_form)},
+                "h2h": asdict(report.h2h),
+                "squad": {"home": asdict(report.home_squad), "away": asdict(report.away_squad)},
+                "market": asdict(report.market),
+                "prediction": asdict(report.prediction),
+                "data_gaps": _data_gaps(report),
+            }
+            for report in reports
+        ],
+        "markdown": format_bulletin_markdown(reports, title=title, generated_at=generated_at),
+    }
 
 
 def format_bulletin_markdown(

@@ -66,7 +66,7 @@ class _RateLimiter:
         self._last_call = time.monotonic()
 
 
-def run_demo() -> str:
+def build_demo_report() -> MatchAnalysisReport:
     from .sample_data.demo_match import (
         H2H_MACLAR,
         TAKIM_A,
@@ -78,7 +78,7 @@ def run_demo() -> str:
         TAKIM_B_SON_MACLAR,
     )
 
-    report = run_pipeline(
+    return run_pipeline(
         TAKIM_A,
         TAKIM_B,
         TAKIM_A_SON_MACLAR,
@@ -88,43 +88,29 @@ def run_demo() -> str:
         TAKIM_B_EKSIKLER,
         TAKIM_A_ORANLAR,
     )
-    return DEMO_BANNER + format_report_markdown(report)
 
 
-def run_bulletin_demo() -> str:
+def run_demo() -> str:
+    return DEMO_BANNER + format_report_markdown(build_demo_report())
+
+
+def build_demo_bulletin_reports() -> list:
     """Birden fazla (kurgusal) maçla bülten çıktısını gösterir.
 
     İkinci maç bilinçli olarak veri eksikliği (form/H2H/kadro/oran yok)
     içerecek şekilde kurgulanmıştır — bültenin "VERİ YOK"/"Yetersiz Veri"
     uyarılarını gerçekten gösterdiğini kanıtlamak içindir.
     """
-    from .sample_data.demo_match import (
-        H2H_MACLAR,
-        TAKIM_A,
-        TAKIM_A_EKSIKLER,
-        TAKIM_A_ORANLAR,
-        TAKIM_A_SON_MACLAR,
-        TAKIM_B,
-        TAKIM_B_EKSIKLER,
-        TAKIM_B_SON_MACLAR,
-        TAKIM_C,
-        TAKIM_D,
-    )
+    from .sample_data.demo_match import TAKIM_C, TAKIM_D
 
-    match1 = run_pipeline(
-        TAKIM_A,
-        TAKIM_B,
-        TAKIM_A_SON_MACLAR,
-        TAKIM_B_SON_MACLAR,
-        H2H_MACLAR,
-        TAKIM_A_EKSIKLER,
-        TAKIM_B_EKSIKLER,
-        TAKIM_A_ORANLAR,
-    )
+    match1 = build_demo_report()
     # Kasıtlı olarak veri eksikliğini göstermek için: hiç maç/kadro/oran verisi verilmiyor.
     match2 = run_pipeline(TAKIM_C, TAKIM_D, [], [], [])
+    return [match1, match2]
 
-    bulletin = format_bulletin_markdown([match1, match2], title="Günlük Tahmin Bülteni (DEMO)")
+
+def run_bulletin_demo() -> str:
+    bulletin = format_bulletin_markdown(build_demo_bulletin_reports(), title="Günlük Tahmin Bülteni (DEMO)")
     return DEMO_BANNER + bulletin
 
 
@@ -210,14 +196,14 @@ def run_live(
     return format_report_markdown(report)
 
 
-def run_bulletin_live(
+def build_bulletin_live_reports(
     competition_code: str,
     date_from: str,
     date_to: str,
     season: int,
     sport_key: Optional[str] = None,
-) -> str:
-    """Bir lig + tarih aralığındaki tüm maçlar için bülten üretir (günlük/haftalık kullanım).
+) -> list:
+    """Bir lig + tarih aralığındaki tüm maçlar için analiz raporlarını üretir.
 
     football-data.org'un dakika başı istek limitini korumak için maçlar
     arasında otomatik olarak yavaşlatma uygulanır (bkz. config.FOOTBALL_DATA_REQUEST_DELAY_SECONDS).
@@ -244,7 +230,17 @@ def run_bulletin_live(
             throttle=throttle,
         )
         reports.append(report)
+    return reports
 
+
+def run_bulletin_live(
+    competition_code: str,
+    date_from: str,
+    date_to: str,
+    season: int,
+    sport_key: Optional[str] = None,
+) -> str:
+    reports = build_bulletin_live_reports(competition_code, date_from, date_to, season, sport_key)
     title = f"{date_from} – {date_to} Tahmin Bülteni ({competition_code})"
     return format_bulletin_markdown(reports, title=title)
 
