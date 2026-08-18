@@ -15,7 +15,9 @@ analiz eden ve olasılık tabanlı tahmin üreten bir sistem.
   - Orkestratör (`agents/orchestrator.py`) — yukarıdakileri sırayla çalıştırıp tek maç için Markdown rapor üretir
   - Rapor & Bülten (`agents/bulletin.py`) — birden çok maçın sonucunu günlük/haftalık bültene dönüştürür;
     her maç için güven düzeyini, eksik veri uyarılarını ("VERİ YOK"/"Yetersiz Veri") ve risk uyarısını gösterir
-  - Henüz eklenmedi: n8n ile zamanlanmış çalıştırma/dağıtım entegrasyonu
+  - `api.py` — n8n gibi orkestrasyon araçlarının çağırabilmesi için ince bir FastAPI HTTP sarmalayıcısı
+- **`n8n/`** — self-hosted n8n'e import edilecek workflow tanımı: günlük zamanlanmış çalıştırma,
+  `api.py`'yi çağırıp bülteni bir Markdown dosyasına yazar (bkz. `n8n/README.md`)
 - **`index.html` + `api/matches.js`** — ayrı, mevcut basit JS/Vercel canlı skor arayüzü (ajan ordusundan bağımsız)
 
 ## Veri bütünlüğü kuralı (kesin)
@@ -58,10 +60,22 @@ python -m ajan_ordusu.main --bulletin --competition PL --date-from 2026-08-18 --
 
 # Testler
 pytest
+
+# HTTP API'yi başlat (n8n gibi araçların çağırması için, bkz. n8n/README.md):
+uvicorn ajan_ordusu.api:app --host 0.0.0.0 --port 8000
 ```
 
 Tahminler olasılık tabanlıdır, kesin sonuç garantisi vermez — bu uyarı her
 raporun ve bültenin başında/sonunda otomatik olarak yer alır.
+
+## n8n ile zamanlanmış çalıştırma
+
+`n8n/futbol_bulten_workflow.json`, `api.py`'yi günde bir kez tetikleyip
+bülteni bir Markdown dosyasına yazan hazır bir n8n workflow'udur. Kurulum ve
+ortam değişkenleri için bkz. [`n8n/README.md`](n8n/README.md). Şu an için
+dağıtım kanalı yalnızca dosya çıktısıdır; Telegram/Discord/e-posta gibi
+mesajlaşma entegrasyonları kapsam dışıdır (bilinçli bir seçimdi, ileride
+workflow'a tek bir node eklenerek genişletilebilir).
 
 ## api/matches.js hakkında not
 

@@ -1,2 +1,9 @@
 requests>=2.31
 pytest>=8.0
+
+# n8n gibi orkestrasyon araçlarının HTTP Request node'uyla çağırabilmesi için
+# HTTP API sarmalayıcı (bkz. ajan_ordusu/api.py). Sadece API'yi çalıştıracak
+# veya test edecekseniz gereklidir; CLI (main.py) tek başına bunlara ihtiyaç duymaz.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27
