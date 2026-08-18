@@ -1,9 +1,10 @@
 from ajan_ordusu.agents.form_analysis import analyze_form
 from ajan_ordusu.agents.h2h_analysis import analyze_h2h
+from ajan_ordusu.agents.market_analysis import analyze_market
 from ajan_ordusu.agents.orchestrator import run_pipeline
 from ajan_ordusu.agents.prediction import predict
 from ajan_ordusu.agents.squad_analysis import analyze_squad
-from ajan_ordusu.schemas import InjuryEntry, MatchResult, PlayerRef, TeamRef
+from ajan_ordusu.schemas import InjuryEntry, MatchResult, OddsQuote, PlayerRef, TeamRef
 
 A = TeamRef(id="a", name="Takım A")
 B = TeamRef(id="b", name="Takım B")
@@ -149,3 +150,55 @@ def test_predict_flags_missing_form_data_instead_of_faking_it():
     assert prediction.confidence == "Yetersiz Veri"
     assert any("VERİ YOK" in r for r in prediction.rationale)
     assert any("UYARI" in r for r in prediction.rationale)
+
+
+def test_analyze_market_with_no_quotes_reports_no_data():
+    market = analyze_market(A, B, None)
+    assert market.data_available is False
+    assert market.consensus_home_prob is None
+    assert any("VERİ YOK" in n for n in market.notes)
+
+
+def test_analyze_market_devigs_and_averages_real_odds():
+    quotes = [
+        OddsQuote(bookmaker="Kitapçı 1", home_odds=2.00, draw_odds=3.00, away_odds=4.00),
+        OddsQuote(bookmaker="Kitapçı 2", home_odds=2.10, draw_odds=3.10, away_odds=3.90),
+    ]
+    market = analyze_market(A, B, quotes)
+
+    assert market.data_available is True
+    total = round(market.consensus_home_prob + market.consensus_draw_prob + market.consensus_away_prob, 1)
+    assert total == 100.0
+    # Ev sahibi en düşük orana (en yüksek olasılığa) sahip -> en yüksek zımni olasılık ev sahibinde olmalı
+    assert market.consensus_home_prob > market.consensus_draw_prob > market.consensus_away_prob
+
+
+def test_predict_blends_model_with_real_market_consensus():
+    form_home = analyze_form(A, [MatchResult("2026-01-01", A, B, 1, 1)], n=1)
+    form_away = analyze_form(B, [MatchResult("2026-01-01", A, B, 1, 1)], n=1)
+    empty_h2h = analyze_h2h(A, B, [], n=5)
+
+    baseline = predict(form_home, form_away, empty_h2h)
+
+    lopsided_market = analyze_market(
+        A,
+        B,
+        [OddsQuote(bookmaker="Kitapçı", home_odds=1.20, draw_odds=6.00, away_odds=12.00)],
+    )
+    with_market = predict(form_home, form_away, empty_h2h, market=lopsided_market)
+
+    assert with_market.home_win_prob > baseline.home_win_prob
+    total = round(with_market.home_win_prob + with_market.draw_prob + with_market.away_win_prob, 1)
+    assert total == 100.0
+    assert any("piyasa" in r.lower() for r in with_market.rationale)
+
+
+def test_predict_notes_missing_market_data_without_faking_it():
+    form_home = analyze_form(A, [MatchResult("2026-01-01", A, B, 1, 1)], n=1)
+    form_away = analyze_form(B, [MatchResult("2026-01-01", A, B, 1, 1)], n=1)
+    empty_h2h = analyze_h2h(A, B, [], n=5)
+    no_market = analyze_market(A, B, None)
+
+    prediction = predict(form_home, form_away, empty_h2h, market=no_market)
+
+    assert any("VERİ YOK" in n or "bulunamadı" in n.lower() for n in [prediction.rationale[-1]])

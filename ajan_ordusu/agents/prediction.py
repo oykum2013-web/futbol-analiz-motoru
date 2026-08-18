@@ -13,7 +13,8 @@ sunulmaz.
 
 from typing import Optional
 
-from ..schemas import FormReport, H2HReport, Prediction, SquadReport
+from .. import config
+from ..schemas import FormReport, H2HReport, MarketReport, Prediction, SquadReport
 
 HOME_ADVANTAGE = 0.15
 MIN_STRENGTH = 0.05
@@ -44,6 +45,7 @@ def predict(
     h2h: H2HReport,
     home_squad: Optional[SquadReport] = None,
     away_squad: Optional[SquadReport] = None,
+    market: Optional[MarketReport] = None,
 ) -> Prediction:
     home_strength = _team_strength(home_form) + HOME_ADVANTAGE
     away_strength = _team_strength(away_form)
@@ -117,6 +119,31 @@ def predict(
         round(away_win_prob / total_check * 100, 1),
     )
 
+    market_used = False
+    if market is not None and market.data_available:
+        w = config.MARKET_BLEND_WEIGHT
+        home_win_prob = round(w * market.consensus_home_prob + (1 - w) * home_win_prob, 1)
+        draw_prob = round(w * market.consensus_draw_prob + (1 - w) * draw_prob, 1)
+        away_win_prob = round(w * market.consensus_away_prob + (1 - w) * away_win_prob, 1)
+        # Yuvarlama sonrası toplamı tam 100'e sabitle (en büyük paya artık/eksiği ekle).
+        diff = round(100 - (home_win_prob + draw_prob + away_win_prob), 1)
+        if diff != 0:
+            largest = max(("home", home_win_prob), ("draw", draw_prob), ("away", away_win_prob), key=lambda x: x[1])[0]
+            if largest == "home":
+                home_win_prob = round(home_win_prob + diff, 1)
+            elif largest == "draw":
+                draw_prob = round(draw_prob + diff, 1)
+            else:
+                away_win_prob = round(away_win_prob + diff, 1)
+        market_used = True
+        rationale.append(
+            f"Piyasa (oran) konsensüsü: Ev %{market.consensus_home_prob}, "
+            f"Beraberlik %{market.consensus_draw_prob}, Deplasman %{market.consensus_away_prob} "
+            f"— model tahminiyle {int(w * 100)}/{int((1 - w) * 100)} ağırlıkla harmanlandı."
+        )
+    elif market is not None and not market.data_available:
+        rationale.append("Oran/piyasa verisi bulunamadı, bu faktör tahmine dahil edilmedi.")
+
     sample_size = home_form.matches_considered + away_form.matches_considered + h2h.matches_considered
     if sample_size >= 15:
         confidence = "Orta"
@@ -126,6 +153,10 @@ def predict(
         confidence = "Çok Düşük"
     if max(home_win_prob, draw_prob, away_win_prob) >= 55 and sample_size >= 10:
         confidence = "Orta-Yüksek"
+    if market_used and confidence in ("Çok Düşük", "Düşük"):
+        # Gerçek piyasa verisi, bağımsız ve genelde güçlü bir sinyal olduğundan
+        # düşük örneklem güvenini bir kademe yukarı taşır.
+        confidence = "Orta"
 
     if not home_has_form_data or not away_has_form_data:
         # En az bir takım için gerçek veri yok: nötr yer tutucu kullanıldığından

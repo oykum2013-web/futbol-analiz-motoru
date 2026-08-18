@@ -96,6 +96,31 @@ class SquadReport:
 
 
 @dataclass
+class OddsQuote:
+    """Tek bir bahis şirketinin bir maç için verdiği gerçek ondalık oranlar."""
+
+    bookmaker: str
+    home_odds: Optional[float] = None
+    draw_odds: Optional[float] = None
+    away_odds: Optional[float] = None
+
+
+@dataclass
+class MarketReport:
+    """Oran/Piyasa Ajanı çıktısı: gerçek bahis oranlarından hesaplanan zımni olasılıklar."""
+
+    home: TeamRef
+    away: TeamRef
+    data_available: bool = False
+    quotes: List[OddsQuote] = field(default_factory=list)
+    # Vig (bahis şirketi marjı) arındırılmış, bahis şirketleri arası ortalama zımni olasılıklar (0..100).
+    consensus_home_prob: Optional[float] = None
+    consensus_draw_prob: Optional[float] = None
+    consensus_away_prob: Optional[float] = None
+    notes: List[str] = field(default_factory=list)
+
+
+@dataclass
 class Prediction:
     """Tahmin Ajanı çıktısı: olasılık tabanlı maç sonucu tahmini."""
 

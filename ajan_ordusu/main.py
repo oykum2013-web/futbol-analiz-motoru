@@ -5,24 +5,29 @@ Kullanım:
     python -m ajan_ordusu.main --demo
 
     # Gerçek veri ile (football-data.org, FOOTBALL_DATA_API_TOKEN gerektirir):
-    python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --match-id 12345
+    python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61
 
-    # Sakatlık/kadro verisi de dahil etmek için (API-Football, API_FOOTBALL_KEY gerektirir):
-    python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --season 2025
+    # Sakatlık/kadro + oran verisi de dahil etmek için:
+    #   API_FOOTBALL_KEY (sakatlık) ve THE_ODDS_API_KEY (oran) ortam değişkenleri tanımlı olmalı.
+    python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --season 2025 \
+        --sport-key soccer_epl
 """
 
 import argparse
 import sys
+from typing import Optional
 
 from .agents.data_collection import (
     filter_h2h_matches,
     filter_team_matches,
     normalize_football_data_matches,
 )
+from .agents.market_analysis import normalize_the_odds_api_event
 from .agents.orchestrator import format_report_markdown, run_pipeline
 from .agents.squad_analysis import normalize_api_football_injuries
 from .clients.api_football import ApiFootballClient, ApiFootballClientError
 from .clients.football_data import FootballDataClient
+from .clients.the_odds_api import TheOddsApiClient, TheOddsApiClientError
 from .schemas import TeamRef
 
 
@@ -31,6 +36,7 @@ def run_demo() -> str:
         H2H_MACLAR,
         TAKIM_A,
         TAKIM_A_EKSIKLER,
+        TAKIM_A_ORANLAR,
         TAKIM_A_SON_MACLAR,
         TAKIM_B,
         TAKIM_B_EKSIKLER,
@@ -45,6 +51,7 @@ def run_demo() -> str:
         H2H_MACLAR,
         TAKIM_A_EKSIKLER,
         TAKIM_B_EKSIKLER,
+        TAKIM_A_ORANLAR,
     )
     banner = (
         "⚠️⚠️ BU BİR DEMO RAPORUDUR — takım adları ve tüm veriler tamamen "
@@ -55,7 +62,7 @@ def run_demo() -> str:
 
 
 def _fetch_missing_players(team_id: str, season: int):
-    """API_FOOTBALL_KEY tanımlıysa sakatlık/kadro verisini çeker; yoksa sessizce atlar."""
+    """API_FOOTBALL_KEY tanımlıysa sakatlık/kadro verisini çeker; yoksa sessizce atlar (None)."""
     try:
         client = ApiFootballClient()
     except ApiFootballClientError:
@@ -64,7 +71,32 @@ def _fetch_missing_players(team_id: str, season: int):
     return normalize_api_football_injuries(raw)
 
 
-def run_live(home_team_id: str, away_team_id: str, home_name: str, away_name: str, season: int) -> str:
+def _fetch_odds_quotes(sport_key: str, home_name: str, away_name: str):
+    """THE_ODDS_API_KEY tanımlıysa oran verisini çeker; yoksa ya da maç bulunamazsa None döner.
+
+    Kotayı korumak için istemci varsayılan olarak günlük (UTC) dosya önbelleği
+    kullanır — aynı gün içinde aynı lig için tekrar çağrılırsa API'ye yeniden
+    istek atılmaz.
+    """
+    try:
+        client = TheOddsApiClient()
+    except TheOddsApiClientError:
+        return None
+    events = client.get_odds(sport_key)
+    event = client.find_event(events, home_name, away_name)
+    if event is None:
+        return None
+    return normalize_the_odds_api_event(event)
+
+
+def run_live(
+    home_team_id: str,
+    away_team_id: str,
+    home_name: str,
+    away_name: str,
+    season: int,
+    sport_key: Optional[str] = None,
+) -> str:
     client = FootballDataClient()
     home_team = TeamRef(id=home_team_id, name=home_name)
     away_team = TeamRef(id=away_team_id, name=away_name)
@@ -79,9 +111,17 @@ def run_live(home_team_id: str, away_team_id: str, home_name: str, away_name: st
 
     home_missing = _fetch_missing_players(home_team_id, season)
     away_missing = _fetch_missing_players(away_team_id, season)
+    odds_quotes = _fetch_odds_quotes(sport_key, home_name, away_name) if sport_key else None
 
     report = run_pipeline(
-        home_team, away_team, home_matches, away_matches, h2h_matches, home_missing, away_missing
+        home_team,
+        away_team,
+        home_matches,
+        away_matches,
+        h2h_matches,
+        home_missing,
+        away_missing,
+        odds_quotes,
     )
     return format_report_markdown(report)
 
@@ -99,6 +139,13 @@ def main() -> None:
         default=2025,
         help="API-Football sakatlık sorgusu için sezon yılı (API_FOOTBALL_KEY tanımlıysa kullanılır)",
     )
+    parser.add_argument(
+        "--sport-key",
+        help=(
+            "The Odds API lig anahtarı (ör. soccer_epl, soccer_germany_bundesliga1) — "
+            "THE_ODDS_API_KEY tanımlıysa oran verisini çekmek için kullanılır"
+        ),
+    )
     args = parser.parse_args()
 
     if args.demo:
@@ -109,7 +156,16 @@ def main() -> None:
         parser.error("--demo kullanmıyorsanız --home-team-id ve --away-team-id zorunludur")
 
     try:
-        print(run_live(args.home_team_id, args.away_team_id, args.home_name, args.away_name, args.season))
+        print(
+            run_live(
+                args.home_team_id,
+                args.away_team_id,
+                args.home_name,
+                args.away_name,
+                args.season,
+                args.sport_key,
+            )
+        )
     except Exception as exc:  # noqa: BLE001 - CLI için kullanıcıya okunabilir hata gösterimi
         print(f"Hata: {exc}", file=sys.stderr)
         sys.exit(1)

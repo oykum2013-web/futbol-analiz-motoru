@@ -4,7 +4,7 @@ DİKKAT: Takım adları ve maç sonuçları tamamen kurgusaldır, gerçek bir ta
 veya maç sonucunu temsil etmez. Sadece pipeline'ı test etmek içindir.
 """
 
-from ..schemas import InjuryEntry, MatchResult, PlayerRef, TeamRef
+from ..schemas import InjuryEntry, MatchResult, OddsQuote, PlayerRef, TeamRef
 
 TAKIM_A = TeamRef(id="demo-a", name="Yıldız Spor (DEMO)")
 TAKIM_B = TeamRef(id="demo-b", name="Deniz Yıldızı FK (DEMO)")
@@ -45,3 +45,9 @@ TAKIM_A_EKSIKLER = [
 
 # Takım B'nin eksik oyuncuları (kurgusal) — kadro derinliği daha az etkilenmiş
 TAKIM_B_EKSIKLER: list = []
+
+# A-B maçı için kurgusal bahis şirketi oranları (gerçek bir maçı temsil etmez)
+TAKIM_A_ORANLAR = [
+    OddsQuote(bookmaker="Demo Bahis 1", home_odds=2.10, draw_odds=3.30, away_odds=3.40),
+    OddsQuote(bookmaker="Demo Bahis 2", home_odds=2.05, draw_odds=3.25, away_odds=3.50),
+]

@@ -1,16 +1,27 @@
 """Orkestratör / Baş Ajan.
 
-Diğer ajanları (form, H2H, kadro, tahmin) sırayla tetikler ve tek bir maç
-için uçtan uca bir analiz raporu üretir.
+Diğer ajanları (form, H2H, kadro, oran/piyasa, tahmin) sırayla tetikler ve
+tek bir maç için uçtan uca bir analiz raporu üretir.
 """
 
 from dataclasses import dataclass
 from typing import List, Optional
 
 from .. import config
-from ..schemas import FormReport, H2HReport, InjuryEntry, MatchResult, Prediction, SquadReport, TeamRef
+from ..schemas import (
+    FormReport,
+    H2HReport,
+    InjuryEntry,
+    MarketReport,
+    MatchResult,
+    OddsQuote,
+    Prediction,
+    SquadReport,
+    TeamRef,
+)
 from .form_analysis import analyze_form
 from .h2h_analysis import analyze_h2h
+from .market_analysis import analyze_market
 from .prediction import predict
 from .squad_analysis import analyze_squad
 
@@ -22,6 +33,7 @@ class MatchAnalysisReport:
     h2h: H2HReport
     home_squad: SquadReport
     away_squad: SquadReport
+    market: MarketReport
     prediction: Prediction
 
 
@@ -33,6 +45,7 @@ def run_pipeline(
     h2h_matches: List[MatchResult],
     home_missing_players: Optional[List[InjuryEntry]] = None,
     away_missing_players: Optional[List[InjuryEntry]] = None,
+    odds_quotes: Optional[List[OddsQuote]] = None,
     form_n: int = config.DEFAULT_FORM_MATCHES,
     h2h_n: int = config.DEFAULT_H2H_MATCHES,
 ) -> MatchAnalysisReport:
@@ -41,19 +54,32 @@ def run_pipeline(
     h2h = analyze_h2h(home_team, away_team, h2h_matches, n=h2h_n)
     home_squad = analyze_squad(home_team, home_missing_players)
     away_squad = analyze_squad(away_team, away_missing_players)
-    prediction = predict(home_form, away_form, h2h, home_squad, away_squad)
+    market = analyze_market(home_team, away_team, odds_quotes)
+    prediction = predict(home_form, away_form, h2h, home_squad, away_squad, market)
     return MatchAnalysisReport(
         home_form=home_form,
         away_form=away_form,
         h2h=h2h,
         home_squad=home_squad,
         away_squad=away_squad,
+        market=market,
         prediction=prediction,
     )
 
 
 def format_report_markdown(report: MatchAnalysisReport) -> str:
     p = report.prediction
+    m = report.market
+
+    if m.data_available:
+        market_lines = [
+            f"- Piyasa konsensüsü: Ev %{m.consensus_home_prob}, Beraberlik %{m.consensus_draw_prob}, "
+            f"Deplasman %{m.consensus_away_prob}"
+            + (f" — {m.notes[0]}" if m.notes else "")
+        ]
+    else:
+        market_lines = [f"- {m.notes[0] if m.notes else 'Oran verisi bulunamadı — VERİ YOK.'}"]
+
     lines = [
         f"# {p.home.name} vs {p.away.name} — Analiz Raporu",
         "",
@@ -80,6 +106,9 @@ def format_report_markdown(report: MatchAnalysisReport) -> str:
         f"- **{report.away_squad.team.name}**: {report.away_squad.impact_level} etki "
         f"({len(report.away_squad.missing_players)} eksik oyuncu)"
         + (f" — {report.away_squad.notes[0]}" if report.away_squad.notes else ""),
+        "",
+        "## Oran / Piyasa",
+        *market_lines,
         "",
         "## Tahmin",
         f"- {p.home.name} kazanır: **%{p.home_win_prob}**",
