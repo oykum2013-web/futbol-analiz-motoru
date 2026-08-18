@@ -78,6 +78,10 @@ python -m ajan_ordusu.main --bulletin --competition PL --next 20
 # Puan durumunu da tahmine dahil etmek için tek maç modunda da --competition verilebilir:
 python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --competition PL
 
+# Tam otomatik bülten — sadece lig kodu verilir; tarih aralığı, sıradaki fikstür sayısı
+# ve çıktı dosya adı (bulten_<LIG>_<tarih>.md) elle girilmeden otomatik doldurulur:
+python -m ajan_ordusu.main --bulletin-auto --competition TR1
+
 # Chromium (Playwright) ile herhangi bir sayfayı ziyaret edip ham metnini rapora eklemek için
 # (opsiyonel; kurulum: pip install playwright && playwright install chromium):
 python -m ajan_ordusu.main --demo --web-url https://ornek-site.com/haber

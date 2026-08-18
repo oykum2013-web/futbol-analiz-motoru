@@ -27,6 +27,7 @@ from typing import Dict, List, Optional
 
 import requests
 
+from . import config
 from .agents.bulletin import format_bulletin_markdown
 from .agents.web_research import format_web_research_markdown, gather_web_snippets
 from .agents.data_collection import (
@@ -297,6 +298,28 @@ def run_bulletin_live(
     return format_bulletin_markdown(reports, title=title)
 
 
+def _auto_output_filename(competition_code: str, today: Optional[date] = None) -> str:
+    """--bulletin-auto için: kullanıcı --output vermese bile rapor dosyaya kaydedilsin diye
+    deterministik bir dosya adı üretir (ör. 'bulten_PL_2026-08-18.md')."""
+    today = today or date.today()
+    return f"bulten_{competition_code}_{today.isoformat()}.md"
+
+
+def apply_bulletin_auto_defaults(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    """--bulletin-auto verilmişse, --bulletin'in gerektirdiği argümanlara varsayılan değer
+    atar: --competition hâlâ zorunludur (parser.error ile çıkılır), ama tarih aralığı ve
+    çıktı dosya adı elle verilmemişse otomatik doldurulur."""
+    if not args.bulletin_auto:
+        return
+    if not args.competition:
+        parser.error("--bulletin-auto için --competition zorunludur")
+    args.bulletin = True
+    if args.next_n is None and not (args.date_from and args.date_to):
+        args.next_n = config.DEFAULT_AUTO_BULLETIN_NEXT_N
+    if not args.output:
+        args.output = _auto_output_filename(args.competition)
+
+
 def _emit(text: str, output_path: Optional[str]) -> None:
     """Raporu ekrana yazdırır; --output verilmişse aynı zamanda dosyaya kaydeder."""
     print(text)
@@ -306,13 +329,23 @@ def _emit(text: str, output_path: Optional[str]) -> None:
         print(f"\n(Rapor '{output_path}' dosyasına kaydedildi.)", file=sys.stderr)
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Ajan ordusu analiz/tahmin/bülten pipeline'ı")
     parser.add_argument("--demo", action="store_true", help="Ağ/anahtar gerektirmeyen tek maç örneği")
     parser.add_argument(
         "--bulletin-demo", action="store_true", help="Ağ/anahtar gerektirmeyen çok maçlı bülten örneği"
     )
     parser.add_argument("--bulletin", action="store_true", help="Gerçek veriyle çok maçlı bülten üret")
+    parser.add_argument(
+        "--bulletin-auto",
+        action="store_true",
+        help=(
+            "--bulletin'in tam otomatik kısayolu: sadece --competition gerekir. Tarih aralığı "
+            f"elle verilmezse en yakın {config.DEFAULT_AUTO_BULLETIN_NEXT_N} fikstür otomatik "
+            "taranır, --output verilmezse rapor kendiliğinden 'bulten_<LIG>_<tarih>.md' "
+            "dosyasına kaydedilir — hiçbir takım ID'si/tarih girmeye gerek yoktur."
+        ),
+    )
     parser.add_argument(
         "--competition",
         help="--bulletin için football-data.org lig kodu (ör. PL, BL1); tek maç modunda puan durumunu dahil etmek için de kullanılabilir",
@@ -365,6 +398,11 @@ def main() -> None:
         "--web-wait-selector",
         help="--web-url sayfaları JS ile geç yükleniyorsa beklenecek CSS seçici (opsiyonel)",
     )
+    return parser
+
+
+def main() -> None:
+    parser = build_parser()
     args = parser.parse_args()
 
     def with_web_research(text: str) -> str:
@@ -381,6 +419,8 @@ def main() -> None:
     if args.bulletin_demo:
         _emit(with_web_research(run_bulletin_demo()), args.output)
         return
+
+    apply_bulletin_auto_defaults(args, parser)
 
     try:
         if args.bulletin:

@@ -25,3 +25,7 @@ MARKET_BLEND_WEIGHT = 0.5
 # tüm çağrıları (farklı HTTP isteklerinden gelenler dahil) bu kadar saniye
 # aralıklandırır (güvenlik payıyla ~9 istek/dk) — bkz. clients/football_data.py.
 FOOTBALL_DATA_REQUEST_DELAY_SECONDS = 6.5
+
+# --bulletin-auto için: --next N elle verilmezse (ve --date-from/--date-to de
+# verilmezse) taranacak varsayılan yaklaşan maç sayısı — bkz. main.py.
+DEFAULT_AUTO_BULLETIN_NEXT_N = 15
