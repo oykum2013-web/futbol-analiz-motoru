@@ -20,6 +20,7 @@ Uç noktalar:
 
 from typing import Optional
 
+import requests
 from fastapi import FastAPI, HTTPException, Query
 
 from . import main as pipeline
@@ -35,8 +36,27 @@ app = FastAPI(
 )
 
 # Yapılandırma eksikliğinden (API anahtarı yok) kaynaklanan hatalar 400 (istemci
-# düzeltebilir); gerçek bir veri kaynağı hatası ise 502 (yukarı akış sorunu) döner.
+# düzeltebilir); gerçek bir veri kaynağı hatası ise 502/429 (yukarı akış sorunu) döner.
 _CONFIG_ERRORS = (FootballDataClientError, ApiFootballClientError, TheOddsApiClientError)
+
+
+def _upstream_error_response(exc: Exception) -> HTTPException:
+    """Bir veri kaynağı (football-data.org vb.) isteği başarısız olduğunda,
+    500 ile çökmek yerine anlaşılır bir hata döner — sahte veri üretmek yerine
+    ne olduğunu açıkça söyler.
+    """
+    if isinstance(exc, requests.exceptions.HTTPError) and exc.response is not None:
+        status = exc.response.status_code
+        if status == 429:
+            return HTTPException(
+                status_code=429,
+                detail=(
+                    "football-data.org kota limiti aşıldı (ücretsiz plan: dakikada 10 istek). "
+                    "Birkaç dakika bekleyip tekrar deneyin."
+                ),
+            )
+        return HTTPException(status_code=502, detail=f"football-data.org kaynağından hata alındı (HTTP {status}).")
+    return HTTPException(status_code=502, detail=f"Veri kaynağına ulaşılamadı: {exc}")
 
 
 @app.get("/health")
@@ -71,6 +91,8 @@ def bulletin(
         reports = pipeline.build_bulletin_live_reports(competition, date_from, date_to, season, sport_key)
     except _CONFIG_ERRORS as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except requests.exceptions.RequestException as exc:
+        raise _upstream_error_response(exc) from exc
 
     title = f"{date_from} – {date_to} Tahmin Bülteni ({competition})"
     return to_bulletin_dict(reports, title=title)
@@ -92,5 +114,7 @@ def match(
         )
     except _CONFIG_ERRORS as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except requests.exceptions.RequestException as exc:
+        raise _upstream_error_response(exc) from exc
 
     return to_bulletin_dict([report], title=f"{home_name} vs {away_name}")

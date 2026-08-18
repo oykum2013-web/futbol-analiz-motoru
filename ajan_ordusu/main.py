@@ -21,10 +21,10 @@ Kullanım:
 
 import argparse
 import sys
-import time
 from typing import Optional
 
-from . import config
+import requests
+
 from .agents.bulletin import format_bulletin_markdown
 from .agents.data_collection import (
     filter_h2h_matches,
@@ -44,26 +44,6 @@ DEMO_BANNER = (
     "KURGUSALDIR, gerçek bir maçı ya da takımı temsil etmez. Sadece "
     "pipeline'ı ağ/API anahtarı olmadan test etmek içindir. ⚠️⚠️\n"
 )
-
-
-class _RateLimiter:
-    """football-data.org ücretsiz plan dakika limitini (10 istek/dk) korumak için.
-
-    Ardışık her `wait()` çağrısı, bir öncekinden en az `min_interval` saniye
-    sonra döner. Tek maçlık sorgularda kullanılmaz; yalnızca bülten modunda
-    birden çok maç için art arda istek atılırken devreye girer.
-    """
-
-    def __init__(self, min_interval: float):
-        self.min_interval = min_interval
-        self._last_call: Optional[float] = None
-
-    def wait(self) -> None:
-        if self._last_call is not None:
-            remaining = self.min_interval - (time.monotonic() - self._last_call)
-            if remaining > 0:
-                time.sleep(remaining)
-        self._last_call = time.monotonic()
 
 
 def build_demo_report() -> MatchAnalysisReport:
@@ -142,6 +122,19 @@ def _fetch_odds_quotes(sport_key: str, home_name: str, away_name: str):
     return normalize_the_odds_api_event(event)
 
 
+def _safe_get_team_matches(client: FootballDataClient, team_id: str) -> list:
+    """Bir takımın maç geçmişini çeker; kaynak hatası (ör. 429 kota aşımı,
+    ağ hatası) durumunda çökmek yerine boş liste döner — bu, form/H2H
+    ajanlarında zaten "veri yok" olarak doğru şekilde raporlanır (bkz. veri
+    bütünlüğü kuralı: eksik veri sessizce uydurulmaz, ama tek bir maçın
+    verisi alınamadı diye TÜM bülten de çökertilmez).
+    """
+    try:
+        return client.get_team_matches(int(team_id), status="FINISHED", limit=10)
+    except requests.exceptions.RequestException:
+        return []
+
+
 def _analyze_live_match(
     client: FootballDataClient,
     home_team_id: str,
@@ -150,17 +143,12 @@ def _analyze_live_match(
     away_name: str,
     season: int,
     sport_key: Optional[str] = None,
-    throttle: Optional[_RateLimiter] = None,
 ) -> MatchAnalysisReport:
     home_team = TeamRef(id=home_team_id, name=home_name)
     away_team = TeamRef(id=away_team_id, name=away_name)
 
-    if throttle:
-        throttle.wait()
-    home_raw = client.get_team_matches(int(home_team_id), status="FINISHED", limit=10)
-    if throttle:
-        throttle.wait()
-    away_raw = client.get_team_matches(int(away_team_id), status="FINISHED", limit=10)
+    home_raw = _safe_get_team_matches(client, home_team_id)
+    away_raw = _safe_get_team_matches(client, away_team_id)
 
     home_matches = filter_team_matches(normalize_football_data_matches(home_raw), home_team_id)
     away_matches = filter_team_matches(normalize_football_data_matches(away_raw), away_team_id)
@@ -205,13 +193,13 @@ def build_bulletin_live_reports(
 ) -> list:
     """Bir lig + tarih aralığındaki tüm maçlar için analiz raporlarını üretir.
 
-    football-data.org'un dakika başı istek limitini korumak için maçlar
-    arasında otomatik olarak yavaşlatma uygulanır (bkz. config.FOOTBALL_DATA_REQUEST_DELAY_SECONDS).
+    football-data.org'un dakika başı istek limitini korumak için istekler
+    arasında otomatik yavaşlatma, istemcinin kendisi tarafından (tüm süreç
+    genelinde paylaşılan şekilde) uygulanır — bkz. clients/football_data.py.
     """
     client = FootballDataClient()
     fixtures = client.get_competition_matches(competition_code, date_from=date_from, date_to=date_to)
 
-    throttle = _RateLimiter(config.FOOTBALL_DATA_REQUEST_DELAY_SECONDS)
     reports = []
     for fixture in fixtures:
         home = fixture.get("homeTeam") or {}
@@ -227,7 +215,6 @@ def build_bulletin_live_reports(
             away.get("name") or "?",
             season,
             sport_key,
-            throttle=throttle,
         )
         reports.append(report)
     return reports

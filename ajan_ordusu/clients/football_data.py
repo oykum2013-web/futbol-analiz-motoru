@@ -7,8 +7,15 @@ Dokümantasyon: https://docs.football-data.org/general/v4/policies.html
 Kullanım:
     client = FootballDataClient(token="...")
     matches = client.get_team_matches(team_id=524, limit=5)
+
+Not (kota koruması): Bu istemci, aynı süreç (process) içindeki TÜM
+çağrıları (farklı HTTP isteklerinden gelenler dahil) tek bir global
+zamanlayıcıyla aralıklandırır — böylece art arda gelen birden fazla
+kullanıcı isteği, ücretsiz planın dakika limitini birlikte aşmaz.
 """
 
+import threading
+import time
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -16,6 +23,12 @@ import requests
 from .. import config
 
 BASE_URL = "https://api.football-data.org/v4"
+
+# Bu, tek bir sürecin TÜM FootballDataClient çağrıları arasında paylaşılır
+# (instance'a özel değil) — aksi hâlde ayrı ayrı HTTP isteklerinden gelen
+# çağrılar birbirinden habersiz aynı anda hızlı istek atıp kotayı aşabilir.
+_throttle_lock = threading.Lock()
+_last_request_at = [0.0]
 
 
 class FootballDataClientError(RuntimeError):
@@ -35,7 +48,15 @@ class FootballDataClient:
         self.session = requests.Session()
         self.session.headers.update({"X-Auth-Token": self.token})
 
+    def _wait_for_quota(self) -> None:
+        with _throttle_lock:
+            remaining = config.FOOTBALL_DATA_REQUEST_DELAY_SECONDS - (time.monotonic() - _last_request_at[0])
+            if remaining > 0:
+                time.sleep(remaining)
+            _last_request_at[0] = time.monotonic()
+
     def _get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        self._wait_for_quota()
         response = self.session.get(f"{BASE_URL}{path}", params=params, timeout=self.timeout)
         response.raise_for_status()
         return response.json()
