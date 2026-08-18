@@ -121,6 +121,33 @@ class MarketReport:
 
 
 @dataclass
+class StandingsEntry:
+    """Puan Durumu Ajanı girdisi: bir takımın lig tablosundaki güncel satırı."""
+
+    team: TeamRef
+    position: int
+    played: int
+    won: int
+    draw: int
+    lost: int
+    goals_for: int
+    goals_against: int
+    points: int
+
+
+@dataclass
+class StandingsReport:
+    """Puan Durumu Ajanı çıktısı: iki takımın lig tablosundaki konumu/performansı."""
+
+    home: TeamRef
+    away: TeamRef
+    data_available: bool = False
+    home_entry: Optional[StandingsEntry] = None
+    away_entry: Optional[StandingsEntry] = None
+    notes: List[str] = field(default_factory=list)
+
+
+@dataclass
 class Prediction:
     """Tahmin Ajanı çıktısı: olasılık tabanlı maç sonucu tahmini."""
 

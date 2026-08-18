@@ -7,3 +7,9 @@ pytest>=8.0
 fastapi>=0.110
 uvicorn[standard]>=0.29
 httpx>=0.27
+
+# Web Araştırma Ajanı için opsiyonel (bkz. ajan_ordusu/clients/browser_scraper.py,
+# --web-url). Sadece bu özelliği kullanacaksanız gereklidir; kurulu değilse geri
+# kalan pipeline sorunsuz çalışmaya devam eder.
+# pip install playwright && playwright install chromium
+# playwright>=1.40

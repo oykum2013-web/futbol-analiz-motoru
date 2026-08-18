@@ -14,7 +14,7 @@ sunulmaz.
 from typing import Optional
 
 from .. import config
-from ..schemas import FormReport, H2HReport, MarketReport, Prediction, SquadReport
+from ..schemas import FormReport, H2HReport, MarketReport, Prediction, SquadReport, StandingsReport
 
 HOME_ADVANTAGE = 0.15
 MIN_STRENGTH = 0.05
@@ -22,6 +22,9 @@ H2H_WEIGHT = 0.3
 DRAW_BASE = 0.20
 DRAW_CLOSENESS_WEIGHT = 0.15
 SQUAD_IMPACT_WEIGHT = 0.4
+# Puan durumu, tüm sezonu (form ise sadece son N maçı) yansıttığından daha
+# düşük bir ağırlıkla katkı sağlar — form sinyaliyle çakışmasın diye küçük tutulur.
+STANDINGS_WEIGHT = 0.2
 
 
 def _team_strength(form: FormReport) -> float:
@@ -46,6 +49,7 @@ def predict(
     home_squad: Optional[SquadReport] = None,
     away_squad: Optional[SquadReport] = None,
     market: Optional[MarketReport] = None,
+    standings: Optional[StandingsReport] = None,
 ) -> Prediction:
     home_strength = _team_strength(home_form) + HOME_ADVANTAGE
     away_strength = _team_strength(away_form)
@@ -97,6 +101,20 @@ def predict(
             f"{away_squad.team.name} kadro etkisi: {away_squad.impact_level} "
             f"({len(away_squad.missing_players)} eksik oyuncu)"
         )
+
+    if standings is not None and standings.data_available:
+        home_ppg = standings.home_entry.points / standings.home_entry.played if standings.home_entry.played else 0.0
+        away_ppg = standings.away_entry.points / standings.away_entry.played if standings.away_entry.played else 0.0
+        home_strength += (home_ppg - away_ppg) / 2 * STANDINGS_WEIGHT
+        away_strength += (away_ppg - home_ppg) / 2 * STANDINGS_WEIGHT
+        rationale.append(
+            f"Puan durumu: {standings.home_entry.team.name} {standings.home_entry.position}. sıra "
+            f"({standings.home_entry.points} puan/{standings.home_entry.played} maç), "
+            f"{standings.away_entry.team.name} {standings.away_entry.position}. sıra "
+            f"({standings.away_entry.points} puan/{standings.away_entry.played} maç)"
+        )
+    elif standings is not None and not standings.data_available:
+        rationale.append("Puan durumu verisi bulunamadı, bu faktör tahmine dahil edilmedi.")
 
     home_strength = max(home_strength, MIN_STRENGTH)
     away_strength = max(away_strength, MIN_STRENGTH)

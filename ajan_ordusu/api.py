@@ -122,21 +122,37 @@ def bulletin_demo() -> dict:
 @app.get("/bulletin")
 def bulletin(
     competition: str = Query(..., description="football-data.org lig kodu (ör. PL, BL1)"),
-    date_from: str = Query(..., description="YYYY-MM-DD"),
-    date_to: str = Query(..., description="YYYY-MM-DD"),
+    date_from: Optional[str] = Query(None, description="YYYY-MM-DD (next_n verilmişse yok sayılır)"),
+    date_to: Optional[str] = Query(None, description="YYYY-MM-DD (next_n verilmişse yok sayılır)"),
+    next_n: Optional[int] = Query(
+        None,
+        alias="next_n",
+        gt=0,
+        description=(
+            "Verilirse date_from/date_to yerine, bugünden itibaren henüz oynanmamış ilk N fikstür "
+            "otomatik bulunup analiz edilir (ör. 'sıradaki 20 maçı analiz et')"
+        ),
+    ),
     season: int = Query(2025, description="API-Football sakatlık sorgusu için sezon yılı"),
     sport_key: Optional[str] = Query(
         None, description="The Odds API lig anahtarı (ör. soccer_epl) — verilmezse oran verisi atlanır"
     ),
 ) -> dict:
+    if next_n is None and (not date_from or not date_to):
+        raise HTTPException(status_code=400, detail="next_n ya da (date_from ve date_to) verilmelidir")
+
     try:
-        reports = pipeline.build_bulletin_live_reports(competition, date_from, date_to, season, sport_key)
+        reports = pipeline.build_bulletin_live_reports(competition, date_from, date_to, season, sport_key, next_n)
     except _CONFIG_ERRORS as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except requests.exceptions.RequestException as exc:
         raise _upstream_error_response(exc) from exc
 
-    title = f"{date_from} – {date_to} Tahmin Bülteni ({competition})"
+    title = (
+        f"Sıradaki {next_n} Maç — Tahmin Bülteni ({competition})"
+        if next_n is not None
+        else f"{date_from} – {date_to} Tahmin Bülteni ({competition})"
+    )
     return to_bulletin_dict(reports, title=title)
 
 
@@ -148,11 +164,15 @@ def match(
     away_name: str = Query("Deplasman"),
     season: int = Query(2025, description="API-Football sakatlık sorgusu için sezon yılı"),
     sport_key: Optional[str] = Query(None, description="The Odds API lig anahtarı"),
+    competition: Optional[str] = Query(
+        None, description="football-data.org lig kodu — verilirse puan durumu da tahmine dahil edilir"
+    ),
 ) -> dict:
     try:
         client = pipeline.FootballDataClient()
+        standings = pipeline._fetch_standings(client, competition)
         report = pipeline._analyze_live_match(
-            client, home_team_id, away_team_id, home_name, away_name, season, sport_key
+            client, home_team_id, away_team_id, home_name, away_name, season, sport_key, standings
         )
     except _CONFIG_ERRORS as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

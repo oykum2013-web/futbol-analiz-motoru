@@ -99,3 +99,12 @@ class FootballDataClient:
     def get_head_to_head(self, match_id: int, limit: int = 10) -> Dict[str, Any]:
         """H2H Ajanı için: planlı/oynanmış bir maçın taraflarının geçmiş karşılaşmaları."""
         return self._get(f"/matches/{match_id}/head2head", params={"limit": limit})
+
+    def get_competition_standings(self, competition_code: str) -> List[Dict[str, Any]]:
+        """Puan Durumu Ajanı için: lig tablosu. TOTAL tipindeki tabloyu döndürür
+        (HOME/AWAY ayrı tablolar da API'de mevcut ama burada kullanılmıyor)."""
+        data = self._get(f"/competitions/{competition_code}/standings")
+        for table in data.get("standings", []):
+            if table.get("type") == "TOTAL":
+                return table.get("table", [])
+        return []

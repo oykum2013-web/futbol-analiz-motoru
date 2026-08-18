@@ -45,6 +45,8 @@ def _data_gaps(report: MatchAnalysisReport) -> List[str]:
         gaps.append(f"{report.away_squad.team.name}: kadro/sakatlık verisi yok")
     if not report.market.data_available:
         gaps.append("Oran/piyasa verisi yok")
+    if not report.standings.data_available:
+        gaps.append("Puan durumu verisi yok")
     return gaps
 
 
@@ -73,6 +75,7 @@ def to_bulletin_dict(
                 "h2h": asdict(report.h2h),
                 "squad": {"home": asdict(report.home_squad), "away": asdict(report.away_squad)},
                 "market": asdict(report.market),
+                "standings": asdict(report.standings),
                 "prediction": asdict(report.prediction),
                 "data_gaps": _data_gaps(report),
             }

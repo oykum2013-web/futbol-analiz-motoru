@@ -5,7 +5,7 @@ from ajan_ordusu.agents.market_analysis import analyze_market
 from ajan_ordusu.agents.orchestrator import run_pipeline
 from ajan_ordusu.agents.prediction import predict
 from ajan_ordusu.agents.squad_analysis import analyze_squad
-from ajan_ordusu.schemas import InjuryEntry, MatchResult, OddsQuote, PlayerRef, TeamRef
+from ajan_ordusu.schemas import InjuryEntry, MatchResult, OddsQuote, PlayerRef, StandingsEntry, TeamRef
 
 A = TeamRef(id="a", name="Takım A")
 B = TeamRef(id="b", name="Takım B")
@@ -219,6 +219,10 @@ def test_bulletin_flags_low_confidence_and_data_gaps():
         [],  # sakatlık kaynağı sorgulandı, eksik yok
         [],
         [OddsQuote(bookmaker="Kitapçı", home_odds=1.80, draw_odds=3.60, away_odds=4.20)],
+        {
+            "a": StandingsEntry(team=A, position=1, played=10, won=8, draw=1, lost=1, goals_for=20, goals_against=5, points=25),
+            "b": StandingsEntry(team=B, position=5, played=10, won=4, draw=2, lost=4, goals_for=12, goals_against=14, points=14),
+        },
     )
     no_data_match = run_pipeline(C, D, [], [], [])  # hiç veri yok -> tüm ajanlar "veri yok" demeli
 

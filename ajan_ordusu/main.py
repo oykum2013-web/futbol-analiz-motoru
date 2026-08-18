@@ -23,11 +23,12 @@ import argparse
 import logging
 import sys
 from datetime import date, timedelta
-from typing import Optional
+from typing import Dict, List, Optional
 
 import requests
 
 from .agents.bulletin import format_bulletin_markdown
+from .agents.web_research import format_web_research_markdown, gather_web_snippets
 from .agents.data_collection import (
     filter_h2h_matches,
     filter_team_matches,
@@ -36,10 +37,15 @@ from .agents.data_collection import (
 from .agents.market_analysis import normalize_the_odds_api_event
 from .agents.orchestrator import MatchAnalysisReport, format_report_markdown, run_pipeline
 from .agents.squad_analysis import normalize_api_football_injuries
+from .agents.standings_analysis import normalize_football_data_standings
 from .clients.api_football import ApiFootballClient, ApiFootballClientError
 from .clients.football_data import FootballDataClient
 from .clients.the_odds_api import TheOddsApiClient, TheOddsApiClientError
-from .schemas import TeamRef
+from .schemas import StandingsEntry, TeamRef
+
+# --next N kullanıldığında (bkz. --bulletin), gelecek maçları aramak için taranacak
+# gün penceresi. Çok dar olursa fikstürü seyrek olan bir lig için N maç bulunamayabilir.
+UPCOMING_SEARCH_WINDOW_DAYS = 120
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +132,23 @@ def _fetch_odds_quotes(sport_key: str, home_name: str, away_name: str):
     return normalize_the_odds_api_event(event)
 
 
+def _fetch_standings(client: FootballDataClient, competition_code: Optional[str]) -> Optional[Dict[str, StandingsEntry]]:
+    """--competition verilmişse lig tablosunu çeker; yoksa (ya da hata alınırsa) None döner.
+
+    Bültende tüm maçlar için TEK SEFERDE çekilip yeniden kullanılır (bkz.
+    build_bulletin_live_reports) — her maç için ayrı ayrı sorgulamak
+    football-data.org kotasını gereksiz yere tüketir.
+    """
+    if not competition_code:
+        return None
+    try:
+        raw_table = client.get_competition_standings(competition_code)
+    except requests.exceptions.RequestException as exc:
+        logger.warning("'%s' için puan durumu çekilemedi: %s", competition_code, exc)
+        return None
+    return normalize_football_data_standings(raw_table)
+
+
 def _safe_get_team_matches(client: FootballDataClient, team_id: str) -> list:
     """Bir takımın maç geçmişini çeker; kaynak hatası (ör. 429 kota aşımı,
     ağ hatası) durumunda çökmek yerine boş liste döner — bu, form/H2H
@@ -155,6 +178,7 @@ def _analyze_live_match(
     away_name: str,
     season: int,
     sport_key: Optional[str] = None,
+    standings_by_team_id: Optional[Dict[str, StandingsEntry]] = None,
 ) -> MatchAnalysisReport:
     home_team = TeamRef(id=home_team_id, name=home_name)
     away_team = TeamRef(id=away_team_id, name=away_name)
@@ -180,6 +204,7 @@ def _analyze_live_match(
         home_missing,
         away_missing,
         odds_quotes,
+        standings_by_team_id,
     )
 
 
@@ -190,27 +215,50 @@ def run_live(
     away_name: str,
     season: int,
     sport_key: Optional[str] = None,
+    competition: Optional[str] = None,
 ) -> str:
     client = FootballDataClient()
-    report = _analyze_live_match(client, home_team_id, away_team_id, home_name, away_name, season, sport_key)
+    standings = _fetch_standings(client, competition)
+    report = _analyze_live_match(
+        client, home_team_id, away_team_id, home_name, away_name, season, sport_key, standings
+    )
     return format_report_markdown(report)
 
 
 def build_bulletin_live_reports(
     competition_code: str,
-    date_from: str,
-    date_to: str,
+    date_from: Optional[str],
+    date_to: Optional[str],
     season: int,
     sport_key: Optional[str] = None,
+    next_n: Optional[int] = None,
 ) -> list:
-    """Bir lig + tarih aralığındaki tüm maçlar için analiz raporlarını üretir.
+    """Bir lig için maç analiz raporlarını üretir.
+
+    `next_n` verilirse `date_from`/`date_to` yok sayılır: bugünden itibaren
+    (± `UPCOMING_SEARCH_WINDOW_DAYS` gün) henüz oynanmamış (SCHEDULED/TIMED)
+    ilk N fikstür, tarihe göre sıralanıp analiz edilir — "bana N maç analizi
+    yap" akışı için tarih aralığını elle hesaplamaya gerek bırakmaz.
 
     football-data.org'un dakika başı istek limitini korumak için istekler
     arasında otomatik yavaşlatma, istemcinin kendisi tarafından (tüm süreç
     genelinde paylaşılan şekilde) uygulanır — bkz. clients/football_data.py.
+    Puan durumu, her maç için ayrı ayrı değil, lig başına TEK SEFERDE çekilir.
     """
     client = FootballDataClient()
+    standings = _fetch_standings(client, competition_code)
+
+    if next_n is not None:
+        date_from = date.today().isoformat()
+        date_to = (date.today() + timedelta(days=UPCOMING_SEARCH_WINDOW_DAYS)).isoformat()
+
     fixtures = client.get_competition_matches(competition_code, date_from=date_from, date_to=date_to)
+
+    if next_n is not None:
+        fixtures = sorted(
+            (f for f in fixtures if f.get("status") in ("SCHEDULED", "TIMED")),
+            key=lambda f: f.get("utcDate") or "",
+        )[:next_n]
 
     reports = []
     for fixture in fixtures:
@@ -227,6 +275,7 @@ def build_bulletin_live_reports(
             away.get("name") or "?",
             season,
             sport_key,
+            standings,
         )
         reports.append(report)
     return reports
@@ -234,13 +283,17 @@ def build_bulletin_live_reports(
 
 def run_bulletin_live(
     competition_code: str,
-    date_from: str,
-    date_to: str,
+    date_from: Optional[str],
+    date_to: Optional[str],
     season: int,
     sport_key: Optional[str] = None,
+    next_n: Optional[int] = None,
 ) -> str:
-    reports = build_bulletin_live_reports(competition_code, date_from, date_to, season, sport_key)
-    title = f"{date_from} – {date_to} Tahmin Bülteni ({competition_code})"
+    reports = build_bulletin_live_reports(competition_code, date_from, date_to, season, sport_key, next_n)
+    if next_n is not None:
+        title = f"Sıradaki {next_n} Maç — Tahmin Bülteni ({competition_code})"
+    else:
+        title = f"{date_from} – {date_to} Tahmin Bülteni ({competition_code})"
     return format_bulletin_markdown(reports, title=title)
 
 
@@ -260,9 +313,22 @@ def main() -> None:
         "--bulletin-demo", action="store_true", help="Ağ/anahtar gerektirmeyen çok maçlı bülten örneği"
     )
     parser.add_argument("--bulletin", action="store_true", help="Gerçek veriyle çok maçlı bülten üret")
-    parser.add_argument("--competition", help="--bulletin için football-data.org lig kodu (ör. PL, BL1)")
+    parser.add_argument(
+        "--competition",
+        help="--bulletin için football-data.org lig kodu (ör. PL, BL1); tek maç modunda puan durumunu dahil etmek için de kullanılabilir",
+    )
     parser.add_argument("--date-from", help="--bulletin için başlangıç tarihi (YYYY-MM-DD)")
     parser.add_argument("--date-to", help="--bulletin için bitiş tarihi (YYYY-MM-DD)")
+    parser.add_argument(
+        "--next",
+        type=int,
+        dest="next_n",
+        metavar="N",
+        help=(
+            "--bulletin ile: --date-from/--date-to yerine, bugünden itibaren henüz "
+            "oynanmamış ilk N fikstürü otomatik bulup analiz eder (ör. 'sıradaki 20 maçı analiz et')"
+        ),
+    )
     parser.add_argument("--home-team-id", help="football-data.org ev sahibi takım ID'si")
     parser.add_argument("--away-team-id", help="football-data.org deplasman takım ID'si")
     parser.add_argument("--home-name", default="Ev Sahibi", help="Raporda gösterilecek ev sahibi adı")
@@ -284,22 +350,57 @@ def main() -> None:
         "--output",
         help="Raporu ekrana yazdırmanın yanında verilen dosya yoluna da (UTF-8, Markdown) kaydeder",
     )
+    parser.add_argument(
+        "--web-url",
+        action="append",
+        dest="web_urls",
+        metavar="URL",
+        help=(
+            "Chromium (Playwright) ile ziyaret edilip ham metni rapora ek bölüm olarak eklenecek "
+            "URL; birden fazla kez verilebilir. Gerekir: pip install playwright && "
+            "playwright install chromium"
+        ),
+    )
+    parser.add_argument(
+        "--web-wait-selector",
+        help="--web-url sayfaları JS ile geç yükleniyorsa beklenecek CSS seçici (opsiyonel)",
+    )
     args = parser.parse_args()
 
+    def with_web_research(text: str) -> str:
+        if not args.web_urls:
+            return text
+        snippets = gather_web_snippets(args.web_urls, wait_selector=args.web_wait_selector)
+        extra = format_web_research_markdown(snippets)
+        return f"{text}\n\n{extra}" if extra else text
+
     if args.demo:
-        _emit(run_demo(), args.output)
+        _emit(with_web_research(run_demo()), args.output)
         return
 
     if args.bulletin_demo:
-        _emit(run_bulletin_demo(), args.output)
+        _emit(with_web_research(run_bulletin_demo()), args.output)
         return
 
     try:
         if args.bulletin:
-            if not args.competition or not args.date_from or not args.date_to:
-                parser.error("--bulletin için --competition, --date-from ve --date-to zorunludur")
+            if not args.competition:
+                parser.error("--bulletin için --competition zorunludur")
+            if args.next_n is None and (not args.date_from or not args.date_to):
+                parser.error("--bulletin için --next N ya da (--date-from ve --date-to) verilmelidir")
+            if args.next_n is not None and args.next_n <= 0:
+                parser.error("--next pozitif bir tam sayı olmalıdır")
             _emit(
-                run_bulletin_live(args.competition, args.date_from, args.date_to, args.season, args.sport_key),
+                with_web_research(
+                    run_bulletin_live(
+                        args.competition,
+                        args.date_from,
+                        args.date_to,
+                        args.season,
+                        args.sport_key,
+                        args.next_n,
+                    )
+                ),
                 args.output,
             )
             return
@@ -311,13 +412,16 @@ def main() -> None:
             )
 
         _emit(
-            run_live(
-                args.home_team_id,
-                args.away_team_id,
-                args.home_name,
-                args.away_name,
-                args.season,
-                args.sport_key,
+            with_web_research(
+                run_live(
+                    args.home_team_id,
+                    args.away_team_id,
+                    args.home_name,
+                    args.away_name,
+                    args.season,
+                    args.sport_key,
+                    args.competition,
+                )
             ),
             args.output,
         )

@@ -10,8 +10,18 @@ analiz eden ve olasılık tabanlı tahmin üreten bir sistem.
   - Form Analiz (`agents/form_analysis.py`) — son N maç performansı
   - H2H (`agents/h2h_analysis.py`) — iki takım arası geçmiş karşılaşmalar
   - Sakatlık/Kadro (`agents/squad_analysis.py`) — eksik/cezalı oyuncuların takım gücüne etkisini skorlar (API-Football)
+  - Puan Durumu (`agents/standings_analysis.py`) — iki takımın güncel lig tablosundaki sırasını/puanını
+    karşılaştırır (football-data.org); Form Ajanı'ndan farklı olarak son N maç değil, tüm sezonun performansını yansıtır
   - Oran/Piyasa (`agents/market_analysis.py`) — gerçek bahis oranlarından zımni olasılıkları hesaplar (The Odds API)
-  - Tahmin (`agents/prediction.py`) — form + H2H + kadro + piyasa etkisini birleştirip olasılık tabanlı tahmin üretir
+  - Web Araştırma (`agents/web_research.py`) — API'si olmayan/JS ile render edilen herhangi bir sayfayı
+    gerçek bir Chromium tarayıcısıyla (Playwright) ziyaret edip ham metnini rapora ek bölüm olarak ekler
+    (bkz. `--web-url`); yapılandırılmış tahmine dahil edilmez, sadece ek bağlam sunar
+  - Tahmin (`agents/prediction.py`) — form + H2H + kadro + puan durumu + piyasa etkisini birleştirip
+    olasılık tabanlı tahmin üretir
+  - Doğrulama/Hata Kontrolü (`agents/validation.py`) — tahmin ajanının çıktısını iç tutarlılık hataları için
+    denetler (olasılık toplamı 100 değil mi, güven düzeyi eldeki veriyle çelişiyor mu vb.); güvenle
+    düzeltilebilen hatalar (ör. yuvarlama sapması) otomatik düzeltilir, düzeltilemeyenler rapora
+    "❌ DÜZELTİLEMEDİ" olarak açıkça yazılır — hiçbir hata sessizce geçilmez
   - Orkestratör (`agents/orchestrator.py`) — yukarıdakileri sırayla çalıştırıp tek maç için Markdown rapor üretir
   - Rapor & Bülten (`agents/bulletin.py`) — birden çok maçın sonucunu günlük/haftalık bültene dönüştürür;
     her maç için güven düzeyini, eksik veri uyarılarını ("VERİ YOK"/"Yetersiz Veri") ve risk uyarısını gösterir
@@ -60,6 +70,17 @@ python -m ajan_ordusu.main --demo --output rapor.md
 
 # Gerçek veriyle günlük/haftalık bülten (bir lig + tarih aralığındaki tüm maçlar):
 python -m ajan_ordusu.main --bulletin --competition PL --date-from 2026-08-18 --date-to 2026-08-18
+
+# "Sıradaki N maçı analiz et" — tarih aralığı hesaplamaya gerek kalmadan, bugünden
+# itibaren henüz oynanmamış ilk N fikstürü otomatik bulup hepsini analiz eder:
+python -m ajan_ordusu.main --bulletin --competition PL --next 20
+
+# Puan durumunu da tahmine dahil etmek için tek maç modunda da --competition verilebilir:
+python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --competition PL
+
+# Chromium (Playwright) ile herhangi bir sayfayı ziyaret edip ham metnini rapora eklemek için
+# (opsiyonel; kurulum: pip install playwright && playwright install chromium):
+python -m ajan_ordusu.main --demo --web-url https://ornek-site.com/haber
 
 # Testler
 pytest
