@@ -13,6 +13,7 @@ Veri" durumu JSON'a olduğu gibi yansır (bkz. schemas.py, agents/bulletin.py).
 
 Uç noktalar:
     GET /health
+    GET /teams?competition=PL                    — gerçek takım ID'lerini bulmak için
     GET /bulletin/demo                          — ağ/anahtar gerektirmez
     GET /bulletin?competition=PL&date_from=...&date_to=...&season=...&sport_key=...
     GET /match?home_team_id=...&away_team_id=...&home_name=...&away_name=...&season=...&sport_key=...
@@ -62,6 +63,27 @@ def _upstream_error_response(exc: Exception) -> HTTPException:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/teams")
+def teams(
+    competition: str = Query(..., description="football-data.org lig kodu (ör. PL, BL1, PD, SA, FL1)")
+) -> dict:
+    """Bir ligdeki gerçek takımları ve football-data.org ID'lerini döner —
+    /match ve /bulletin çağrılarında hangi team_id'nin kullanılacağını
+    bulmak için (ID'ler tahmin edilmemeli, buradan doğrulanmalı)."""
+    try:
+        client = pipeline.FootballDataClient()
+        raw_teams = client.get_competition_teams(competition)
+    except _CONFIG_ERRORS as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except requests.exceptions.RequestException as exc:
+        raise _upstream_error_response(exc) from exc
+
+    return {
+        "competition": competition,
+        "teams": [{"id": t.get("id"), "name": t.get("name"), "short_name": t.get("shortName")} for t in raw_teams],
+    }
 
 
 @app.get("/bulletin/demo")
