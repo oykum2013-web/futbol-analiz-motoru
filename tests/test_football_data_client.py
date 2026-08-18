@@ -1,7 +1,11 @@
-"""football-data.org v4, `limit` parametresini `dateFrom`/`dateTo` ile birlikte
-kabul etmiyor (400 Bad Request) — bu dosya, istemcinin bu kombinasyonu asla
-API'ye göndermediğini ve `date_from` verildiğinde en yeni `limit` maça doğru
-şekilde kırptığını doğrular. Gerçek bir HTTP isteği atmaz (session.get mock'lanır)."""
+"""football-data.org v4'ün iki ayrı, canlı API'ye karşı doğrulanmış kısıtını test eder:
+1. `dateFrom` tek başına gönderilemez, `dateTo` ile eşleşmesi zorunlu (400 aksi hâlde).
+2. `limit`, `dateFrom`/`dateTo` ile birlikte kabul edilmiyor (400).
+Bu dosya, istemcinin bu iki kuralı da doğru uyguladığını ve `date_from` verildiğinde
+en yeni `limit` maça doğru şekilde kırptığını doğrular. Gerçek bir HTTP isteği atmaz
+(session.get mock'lanır)."""
+
+from datetime import date
 
 from ajan_ordusu.clients.football_data import FootballDataClient
 
@@ -39,6 +43,22 @@ def test_get_team_matches_never_sends_limit_with_date_from(monkeypatch):
 
     assert "limit" not in captured["params"]
     assert captured["params"]["dateFrom"] == "2025-08-18"
+
+
+def test_get_team_matches_always_pairs_date_from_with_date_to(monkeypatch):
+    client, captured = _make_client(monkeypatch, matches=[])
+
+    client.get_team_matches(524, date_from="2025-08-18")
+
+    assert captured["params"]["dateTo"] == date.today().isoformat()
+
+
+def test_get_team_matches_respects_explicit_date_to(monkeypatch):
+    client, captured = _make_client(monkeypatch, matches=[])
+
+    client.get_team_matches(524, date_from="2025-08-18", date_to="2025-12-31")
+
+    assert captured["params"]["dateTo"] == "2025-12-31"
 
 
 def test_get_team_matches_trims_to_newest_n_when_date_from_given(monkeypatch):

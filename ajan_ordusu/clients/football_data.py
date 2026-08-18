@@ -1,6 +1,8 @@
 """football-data.org v4 API için ince istemci.
 
-Ücretsiz kayıtlı plan: dakikada 10 istek, çoğu büyük lig dahil (Süper Lig dahil).
+Ücretsiz kayıtlı plan: dakikada 10 istek, büyük Avrupa ligleri (PL, BL1, SA, PD,
+FL1, DED, PPL, ELC, CL, EC, WC vb.) dahil. Türkiye Süper Lig (TSL) ücretsiz planda
+DEĞİL — canlı API'ye karşı doğrulandı (403 döner), bkz. proje geçmişi.
 Kayıt: https://www.football-data.org/client/register
 Dokümantasyon: https://docs.football-data.org/general/v4/policies.html
 
@@ -16,6 +18,7 @@ kullanıcı isteği, ücretsiz planın dakika limitini birlikte aşmaz.
 
 import threading
 import time
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -82,6 +85,7 @@ class FootballDataClient:
         status: str = "FINISHED",
         limit: int = 10,
         date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Form Analiz Ajanı için: bir takımın geçmiş maçları.
 
@@ -91,18 +95,22 @@ class FootballDataClient:
         verebilir. Geçmişe dönük gerçek bir pencere garantilemek için
         çağıran taraf (main.py) açık bir `date_from` geçmelidir.
 
-        football-data.org v4, `limit` parametresini `dateFrom`/`dateTo` ile
-        birlikte kabul etmiyor (birlikte gönderilirse 400 Bad Request döner
-        — canlı API'ye karşı doğrulandı, bkz. proje geçmişi). Bu yüzden
-        `date_from` verildiğinde `limit` API'ye hiç gönderilmiyor; tüm
-        pencere çekilip en yeni `limit` maça istemci tarafında kırpılıyor
-        (API sonuçları eskiden yeniye döndürüyor, bu yüzden kırpma sondan
-        yapılır). `date_from` verilmezse `limit` normal şekilde API'ye
-        gönderilir (sonuçlar zaten en yeniden en eskiye gelir).
+        football-data.org v4'ün iki ayrı, canlı API'ye karşı doğrulanmış kısıtı var
+        (bkz. proje geçmişi — ilk düzeltme eksikti, ikinci turda tam teşhis edildi):
+        1. `dateFrom` tek başına gönderilemez — "Argument dateFrom must be used in
+           conjunction with dateTo and vice versa" hatasıyla 400 döner. Bu yüzden
+           `date_from` verilip `date_to` verilmemişse, `date_to` bugüne varsayılır.
+        2. `limit`, `dateFrom`/`dateTo` ile birlikte kabul edilmiyor (400). Bu yüzden
+           `date_from` kullanılan bir çağrıda `limit` API'ye hiç gönderilmiyor; tüm
+           pencere çekilip en yeni `limit` maça istemci tarafında kırpılıyor (API
+           sonuçları eskiden yeniye döndürüyor, bu yüzden kırpma sondan yapılır).
+        `date_from` hiç verilmezse `limit` normal şekilde API'ye gönderilir (sonuçlar
+        zaten en yeniden en eskiye gelir, kırpmaya gerek yok).
         """
         params: Dict[str, Any] = {"status": status}
         if date_from:
             params["dateFrom"] = date_from
+            params["dateTo"] = date_to or date.today().isoformat()
         else:
             params["limit"] = limit
         data = self._get(f"/teams/{team_id}/matches", params=params)
