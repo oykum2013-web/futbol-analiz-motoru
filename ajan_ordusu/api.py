@@ -86,6 +86,26 @@ def teams(
     }
 
 
+@app.get("/debug/team-matches")
+def debug_team_matches(
+    team_id: int = Query(..., description="football-data.org takım ID'si"),
+    status: str = Query("FINISHED"),
+    date_from: Optional[str] = Query(None, description="YYYY-MM-DD"),
+) -> dict:
+    """Teşhis amaçlı: bir takım için football-data.org'un HAM yanıtını,
+    hiçbir ajan/analiz katmanından geçirmeden, tek bir hızlı istekle döner.
+    """
+    try:
+        client = pipeline.FootballDataClient()
+        raw = client.get_team_matches(team_id, status=status, limit=10, date_from=date_from)
+    except _CONFIG_ERRORS as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except requests.exceptions.RequestException as exc:
+        raise _upstream_error_response(exc) from exc
+
+    return {"team_id": team_id, "status": status, "date_from": date_from, "match_count": len(raw), "raw": raw[:3]}
+
+
 @app.get("/bulletin/demo")
 def bulletin_demo() -> dict:
     """Ağ/anahtar gerektirmeyen, kurgusal iki maçlık örnek bülten (JSON)."""
