@@ -1,8 +1,13 @@
 """Sakatlık / Kadro Ajanı.
 
 Eksik (sakat/cezalı/kadro dışı) oyuncuları değerlendirip bunun takım gücüne
-olası etkisini basit, açıklanabilir bir skora dönüştürür. Veri yoksa etkisiz
-(impact_score=0.0) kabul eder — bu ajan olmadan da pipeline çalışabilir.
+olası etkisini basit, açıklanabilir bir skora dönüştürür.
+
+ÖNEMLİ (veri bütünlüğü kuralı): Bu ajan hiçbir zaman sahte/uydurma sakatlık
+verisi üretmez. `missing_players=None` ("veri hiç sorgulanamadı/alınamadı")
+ile `missing_players=[]` ("kaynak sorgulandı, bilinen bir eksik yok") kesin
+olarak birbirinden ayrılır — aksi hâlde "veri yok" durumu "kadro tam" gibi
+yanlış yorumlanabilir.
 """
 
 from typing import Any, Dict, List, Optional
@@ -34,7 +39,20 @@ def analyze_squad(
     missing_players: Optional[List[InjuryEntry]] = None,
     impact_scale: float = config.SQUAD_IMPACT_SCALE,
 ) -> SquadReport:
-    missing_players = missing_players or []
+    """`missing_players=None` ile `missing_players=[]` farklı anlamlara gelir:
+
+    - `None`: kaynak hiç sorgulanamadı (API anahtarı yok, istek başarısız vb.) → durum "Bilinmiyor".
+    - `[]`: kaynak başarıyla sorgulandı ve bilinen eksik oyuncu yok → etki "Yok" (doğrulanmış).
+    - dolu liste: gerçek kaynaktan gelen eksik oyuncular değerlendirilir.
+    """
+    if missing_players is None:
+        return SquadReport(
+            team=team,
+            missing_players=[],
+            impact_score=0.0,
+            impact_level="Bilinmiyor",
+            notes=["Sakatlık/kadro verisi alınamadı (kaynak sorgulanmadı ya da erişilemedi) — veri yok."],
+        )
 
     if not missing_players:
         return SquadReport(
@@ -42,7 +60,7 @@ def analyze_squad(
             missing_players=[],
             impact_score=0.0,
             impact_level="Yok",
-            notes=["Sakatlık/kadro verisi bulunamadı ya da eksik oyuncu yok."],
+            notes=["Kaynak sorgulandı: bilinen bir eksik oyuncu yok."],
         )
 
     weighted_count = sum(entry.importance for entry in missing_players)

@@ -46,7 +46,12 @@ def run_demo() -> str:
         TAKIM_A_EKSIKLER,
         TAKIM_B_EKSIKLER,
     )
-    return format_report_markdown(report)
+    banner = (
+        "⚠️⚠️ BU BİR DEMO RAPORUDUR — takım adları ve tüm veriler tamamen "
+        "KURGUSALDIR, gerçek bir maçı ya da takımı temsil etmez. Sadece "
+        "pipeline'ı ağ/API anahtarı olmadan test etmek içindir. ⚠️⚠️\n"
+    )
+    return banner + format_report_markdown(report)
 
 
 def _fetch_missing_players(team_id: str, season: int):

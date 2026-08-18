@@ -87,13 +87,23 @@ def test_run_pipeline_end_to_end_with_demo_style_data():
     assert report.prediction.away.name == "Takım B"
     assert report.home_form.matches_considered == 1
     assert report.h2h.matches_considered == 1
-    assert report.home_squad.impact_level == "Yok"
+    # Hiçbir kadro verisi verilmedi (None) -> "veri yok" olarak işaretlenmeli,
+    # "kadro tam" ile karıştırılmamalı.
+    assert report.home_squad.impact_level == "Bilinmiyor"
 
 
-def test_analyze_squad_with_no_missing_players_has_no_impact():
+def test_analyze_squad_with_unknown_data_is_marked_unknown_not_clean():
+    squad = analyze_squad(A, None)
+    assert squad.impact_score == 0.0
+    assert squad.impact_level == "Bilinmiyor"
+    assert "veri" in squad.notes[0].lower()
+
+
+def test_analyze_squad_with_confirmed_empty_list_is_marked_clean():
     squad = analyze_squad(A, [])
     assert squad.impact_score == 0.0
     assert squad.impact_level == "Yok"
+    assert "sorgulandı" in squad.notes[0].lower()
 
 
 def test_analyze_squad_weighs_key_players_more():
@@ -127,3 +137,15 @@ def test_predict_lowers_probability_for_team_with_high_squad_impact():
 
     assert with_injuries.home_win_prob < baseline.home_win_prob
     assert any("kadro etkisi" in r.lower() for r in with_injuries.rationale)
+
+
+def test_predict_flags_missing_form_data_instead_of_faking_it():
+    no_data_form = analyze_form(A, [], n=5)  # takım için hiç maç verisi yok
+    real_form = analyze_form(B, [MatchResult("2026-01-01", B, A, 2, 0)], n=1)
+    empty_h2h = analyze_h2h(A, B, [], n=5)
+
+    prediction = predict(no_data_form, real_form, empty_h2h)
+
+    assert prediction.confidence == "Yetersiz Veri"
+    assert any("VERİ YOK" in r for r in prediction.rationale)
+    assert any("UYARI" in r for r in prediction.rationale)

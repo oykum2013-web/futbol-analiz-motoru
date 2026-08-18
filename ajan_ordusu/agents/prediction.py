@@ -1,8 +1,14 @@
 """Tahmin Ajanı.
 
-Form ve H2H ajanlarının çıktısını birleştirip olasılık tabanlı bir maç sonucu
-tahmini üretir. Bilinçli olarak basit ve açıklanabilir bir sezgisel (heuristic)
-model kullanır — rastgele sayı üretmez, "kesin sonuç" iddia etmez.
+Form, H2H ve kadro ajanlarının çıktısını birleştirip olasılık tabanlı bir maç
+sonucu tahmini üretir. Bilinçli olarak basit ve açıklanabilir bir sezgisel
+(heuristic) model kullanır — rastgele sayı üretmez, "kesin sonuç" iddia etmez.
+
+ÖNEMLİ (veri bütünlüğü kuralı): Bir takım için gerçek form verisi
+bulunamadıysa (matches_considered == 0), bu açıkça "veri yok" olarak
+raporlanır ve güven düzeyi zorla düşürülür — eksik veri, sonucu etkilemeyen
+nötr bir sayıyla sessizce doldurulup gerçek bir istatistikmiş gibi
+sunulmaz.
 """
 
 from typing import Optional
@@ -18,9 +24,15 @@ SQUAD_IMPACT_WEIGHT = 0.4
 
 
 def _team_strength(form: FormReport) -> float:
-    """Maç başı puan ve averaja dayalı basit bir güç skoru üretir."""
+    """Maç başı puan ve averaja dayalı basit bir güç skoru üretir.
+
+    Veri yoksa (matches_considered == 0) nötr bir değer (1.0) döner; bu bir
+    "tahmin" değil, sadece toplamı bozmamak için kullanılan bir yer tutucudur —
+    çağıran taraf (predict()) bu durumu ayrıca "veri yok" olarak raporlar ve
+    güven düzeyini buna göre düşürür.
+    """
     if form.matches_considered == 0:
-        return 1.0  # veri yoksa nötr kabul et
+        return 1.0
     points_per_game = form.points / form.matches_considered  # 0..3
     goal_diff_per_game = (form.goals_for - form.goals_against) / form.matches_considered
     return max(MIN_STRENGTH, points_per_game + goal_diff_per_game * 0.5)
@@ -36,15 +48,29 @@ def predict(
     home_strength = _team_strength(home_form) + HOME_ADVANTAGE
     away_strength = _team_strength(away_form)
 
-    rationale = [
-        f"{home_form.team.name} son {home_form.matches_considered} maç: "
-        f"{home_form.wins}G {home_form.draws}B {home_form.losses}M "
-        f"(form: {home_form.form_string or '-'})",
-        f"{away_form.team.name} son {away_form.matches_considered} maç: "
-        f"{away_form.wins}G {away_form.draws}B {away_form.losses}M "
-        f"(form: {away_form.form_string or '-'})",
-        "Ev sahibi avantajı hesaba katıldı.",
-    ]
+    rationale = []
+    home_has_form_data = home_form.matches_considered > 0
+    away_has_form_data = away_form.matches_considered > 0
+
+    if home_has_form_data:
+        rationale.append(
+            f"{home_form.team.name} son {home_form.matches_considered} maç: "
+            f"{home_form.wins}G {home_form.draws}B {home_form.losses}M "
+            f"(form: {home_form.form_string or '-'})"
+        )
+    else:
+        rationale.append(f"{home_form.team.name} için form verisi bulunamadı — VERİ YOK.")
+
+    if away_has_form_data:
+        rationale.append(
+            f"{away_form.team.name} son {away_form.matches_considered} maç: "
+            f"{away_form.wins}G {away_form.draws}B {away_form.losses}M "
+            f"(form: {away_form.form_string or '-'})"
+        )
+    else:
+        rationale.append(f"{away_form.team.name} için form verisi bulunamadı — VERİ YOK.")
+
+    rationale.append("Ev sahibi avantajı hesaba katıldı.")
 
     if h2h.matches_considered > 0:
         h2h_home_rate = (h2h.home_wins - h2h.away_wins) / h2h.matches_considered
@@ -100,6 +126,15 @@ def predict(
         confidence = "Çok Düşük"
     if max(home_win_prob, draw_prob, away_win_prob) >= 55 and sample_size >= 10:
         confidence = "Orta-Yüksek"
+
+    if not home_has_form_data or not away_has_form_data:
+        # En az bir takım için gerçek veri yok: nötr yer tutucu kullanıldığından
+        # sonuç güvenilir bir istatistiğe dayanmıyor — bu açıkça belirtilmeli.
+        confidence = "Yetersiz Veri"
+        rationale.append(
+            "UYARI: En az bir takım için form verisi bulunamadığından bu yüzdeler "
+            "güvenilir bir istatistiğe dayanmıyor."
+        )
 
     return Prediction(
         home=home_form.team,
