@@ -83,19 +83,33 @@ class FootballDataClient:
         limit: int = 10,
         date_from: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Form Analiz Ajanı için: bir takımın geçmiş maçları (en yeni önce).
+        """Form Analiz Ajanı için: bir takımın geçmiş maçları.
 
         `date_from` verilmezse API'nin dokümante edilmemiş varsayılan
         penceresine (genelde güncel sezon) güvenilir — bu, sezonun henüz
         yeni başladığı dönemlerde yanlışlıkla "hiç bitmiş maç yok" sonucu
         verebilir. Geçmişe dönük gerçek bir pencere garantilemek için
         çağıran taraf (main.py) açık bir `date_from` geçmelidir.
+
+        football-data.org v4, `limit` parametresini `dateFrom`/`dateTo` ile
+        birlikte kabul etmiyor (birlikte gönderilirse 400 Bad Request döner
+        — canlı API'ye karşı doğrulandı, bkz. proje geçmişi). Bu yüzden
+        `date_from` verildiğinde `limit` API'ye hiç gönderilmiyor; tüm
+        pencere çekilip en yeni `limit` maça istemci tarafında kırpılıyor
+        (API sonuçları eskiden yeniye döndürüyor, bu yüzden kırpma sondan
+        yapılır). `date_from` verilmezse `limit` normal şekilde API'ye
+        gönderilir (sonuçlar zaten en yeniden en eskiye gelir).
         """
-        params: Dict[str, Any] = {"status": status, "limit": limit}
+        params: Dict[str, Any] = {"status": status}
         if date_from:
             params["dateFrom"] = date_from
+        else:
+            params["limit"] = limit
         data = self._get(f"/teams/{team_id}/matches", params=params)
-        return data.get("matches", [])
+        matches = data.get("matches", [])
+        if date_from and limit:
+            matches = matches[-limit:]
+        return matches
 
     def get_head_to_head(self, match_id: int, limit: int = 10) -> Dict[str, Any]:
         """H2H Ajanı için: planlı/oynanmış bir maçın taraflarının geçmiş karşılaşmaları."""
