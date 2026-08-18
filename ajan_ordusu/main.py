@@ -22,6 +22,7 @@ Kullanım:
 import argparse
 import logging
 import sys
+from datetime import date, timedelta
 from typing import Optional
 
 import requests
@@ -133,9 +134,14 @@ def _safe_get_team_matches(client: FootballDataClient, team_id: str) -> list:
     verisi alınamadı diye TÜM bülten de çökertilmez).
 
     Hata yutulmuyor — teşhis edilebilmesi için loglanıyor (bkz. sunucu logları).
+
+    API'nin dokümante edilmemiş varsayılan tarih penceresine güvenmemek için
+    (sezon henüz yeni başlamışken yanlışlıkla "hiç maç yok" sonucu
+    verebiliyordu — bkz. proje geçmişi), açıkça son 365 günü istiyoruz.
     """
+    date_from = (date.today() - timedelta(days=365)).isoformat()
     try:
-        return client.get_team_matches(int(team_id), status="FINISHED", limit=10)
+        return client.get_team_matches(int(team_id), status="FINISHED", limit=10, date_from=date_from)
     except requests.exceptions.RequestException as exc:
         logger.warning("Takım %s için maç verisi çekilemedi: %s", team_id, exc)
         return []
