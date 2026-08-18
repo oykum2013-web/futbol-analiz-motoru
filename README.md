@@ -16,6 +16,10 @@ analiz eden ve olasılık tabanlı tahmin üreten bir sistem.
   - Web Araştırma (`agents/web_research.py`) — API'si olmayan/JS ile render edilen herhangi bir sayfayı
     gerçek bir Chromium tarayıcısıyla (Playwright) ziyaret edip ham metnini rapora ek bölüm olarak ekler
     (bkz. `--web-url`); yapılandırılmış tahmine dahil edilmez, sadece ek bağlam sunar
+  - Mackolik Puan Durumu (`agents/mackolik_standings.py`) — football-data.org'un ücretsiz planında
+    olmayan ligler (ör. Türkiye Süper Lig) için mackolik.com'un puan durumu sayfasını Chromium ile
+    çekip yapılandırılmış bir tabloya (Markdown) dönüştürür (bkz. `--mackolik-standings-url`);
+    API anahtarı gerektirmez
   - Tahmin (`agents/prediction.py`) — form + H2H + kadro + puan durumu + piyasa etkisini birleştirip
     olasılık tabanlı tahmin üretir
   - Doğrulama/Hata Kontrolü (`agents/validation.py`) — tahmin ajanının çıktısını iç tutarlılık hataları için
@@ -85,6 +89,10 @@ python -m ajan_ordusu.main --bulletin-auto --competition TSL
 # Chromium (Playwright) ile herhangi bir sayfayı ziyaret edip ham metnini rapora eklemek için
 # (opsiyonel; kurulum: pip install playwright && playwright install chromium):
 python -m ajan_ordusu.main --demo --web-url https://ornek-site.com/haber
+
+# Türkiye Süper Lig gibi football-data.org'un ücretsiz planında olmayan ligler için:
+# mackolik.com'dan gerçek, yapılandırılmış puan durumu tablosu (API anahtarı gerekmez):
+python -m ajan_ordusu.main --mackolik-standings-url "https://www.mackolik.com/puan-durumu/türkiye-trendyol-süper-lig/2026-2027/482ofyysbdbeoxauk19yg7tdt"
 
 # Testler
 pytest

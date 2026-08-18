@@ -29,6 +29,11 @@ import requests
 
 from . import config
 from .agents.bulletin import format_bulletin_markdown
+from .agents.mackolik_standings import (
+    MackolikStandingsError,
+    fetch_mackolik_standings,
+    format_mackolik_standings_markdown,
+)
 from .agents.web_research import format_web_research_markdown, gather_web_snippets
 from .agents.data_collection import (
     filter_h2h_matches,
@@ -398,6 +403,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--web-wait-selector",
         help="--web-url sayfaları JS ile geç yükleniyorsa beklenecek CSS seçici (opsiyonel)",
     )
+    parser.add_argument(
+        "--mackolik-standings-url",
+        metavar="URL",
+        help=(
+            "football-data.org'un ücretsiz planında olmayan ligler (ör. Türkiye Süper Lig) için: "
+            "mackolik.com'un puan durumu sayfasını Chromium ile çekip yapılandırılmış bir puan "
+            "durumu tablosu (Markdown) üretir. API anahtarı gerektirmez, diğer modlarla birlikte "
+            "kullanılmaz — bağımsız bir çalıştırma modudur."
+        ),
+    )
     return parser
 
 
@@ -411,6 +426,16 @@ def main() -> None:
         snippets = gather_web_snippets(args.web_urls, wait_selector=args.web_wait_selector)
         extra = format_web_research_markdown(snippets)
         return f"{text}\n\n{extra}" if extra else text
+
+    if args.mackolik_standings_url:
+        try:
+            entries = fetch_mackolik_standings(args.mackolik_standings_url)
+        except MackolikStandingsError as exc:
+            print(f"Hata: {exc}", file=sys.stderr)
+            sys.exit(1)
+        title = "Puan Durumu (mackolik.com)"
+        _emit(format_mackolik_standings_markdown(entries, title=title), args.output)
+        return
 
     if args.demo:
         _emit(with_web_research(run_demo()), args.output)
