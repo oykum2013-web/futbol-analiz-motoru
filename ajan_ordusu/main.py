@@ -244,6 +244,15 @@ def run_bulletin_live(
     return format_bulletin_markdown(reports, title=title)
 
 
+def _emit(text: str, output_path: Optional[str]) -> None:
+    """Raporu ekrana yazdırır; --output verilmişse aynı zamanda dosyaya kaydeder."""
+    print(text)
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        print(f"\n(Rapor '{output_path}' dosyasına kaydedildi.)", file=sys.stderr)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ajan ordusu analiz/tahmin/bülten pipeline'ı")
     parser.add_argument("--demo", action="store_true", help="Ağ/anahtar gerektirmeyen tek maç örneği")
@@ -271,21 +280,28 @@ def main() -> None:
             "THE_ODDS_API_KEY tanımlıysa oran verisini çekmek için kullanılır"
         ),
     )
+    parser.add_argument(
+        "--output",
+        help="Raporu ekrana yazdırmanın yanında verilen dosya yoluna da (UTF-8, Markdown) kaydeder",
+    )
     args = parser.parse_args()
 
     if args.demo:
-        print(run_demo())
+        _emit(run_demo(), args.output)
         return
 
     if args.bulletin_demo:
-        print(run_bulletin_demo())
+        _emit(run_bulletin_demo(), args.output)
         return
 
     try:
         if args.bulletin:
             if not args.competition or not args.date_from or not args.date_to:
                 parser.error("--bulletin için --competition, --date-from ve --date-to zorunludur")
-            print(run_bulletin_live(args.competition, args.date_from, args.date_to, args.season, args.sport_key))
+            _emit(
+                run_bulletin_live(args.competition, args.date_from, args.date_to, args.season, args.sport_key),
+                args.output,
+            )
             return
 
         if not args.home_team_id or not args.away_team_id:
@@ -294,7 +310,7 @@ def main() -> None:
                 "--home-team-id ve --away-team-id zorunludur"
             )
 
-        print(
+        _emit(
             run_live(
                 args.home_team_id,
                 args.away_team_id,
@@ -302,7 +318,8 @@ def main() -> None:
                 args.away_name,
                 args.season,
                 args.sport_key,
-            )
+            ),
+            args.output,
         )
     except Exception as exc:  # noqa: BLE001 - CLI için kullanıcıya okunabilir hata gösterimi
         print(f"Hata: {exc}", file=sys.stderr)

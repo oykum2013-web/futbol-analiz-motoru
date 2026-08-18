@@ -55,6 +55,9 @@ python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --sport-key socc
 # Ağ/anahtar gerektirmeyen çok maçlı bülten örneği (biri eksik verili, uyarıları gösterir):
 python -m ajan_ordusu.main --bulletin-demo
 
+# Raporu ekranın yanında bir dosyaya da kaydetmek için (--output her modla kullanılabilir):
+python -m ajan_ordusu.main --demo --output rapor.md
+
 # Gerçek veriyle günlük/haftalık bülten (bir lig + tarih aralığındaki tüm maçlar):
 python -m ajan_ordusu.main --bulletin --competition PL --date-from 2026-08-18 --date-to 2026-08-18
 
