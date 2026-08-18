@@ -15,11 +15,35 @@ kurulu olmayan ortamlarda geri kalan paket sorunsuz import edilebilir.
 
 from __future__ import annotations
 
+import glob
+import os
 from typing import List, Optional
 
 
 class BrowserScraperError(Exception):
     """playwright kurulu değil, tarayıcı başlatılamadı ya da sayfa yüklenemedi."""
+
+
+def _find_preinstalled_chromium() -> Optional[str]:
+    """`playwright install` çalıştırılmamış ama ortamda PLAYWRIGHT_BROWSERS_PATH altında
+    önceden indirilmiş bir Chromium varsa (ör. bazı sandbox/CI imajları), yürütülebilir
+    dosyasını bulur. pip'teki playwright paketinin beklediği build numarasıyla ortamdaki
+    önceden-kurulmuş build birebir eşleşmeyebilir (bkz. proje geçmişi); bu durumda normal
+    `chromium.launch()` "Executable doesn't exist" hatasıyla başarısız olur, biz de burada
+    bulduğumuz herhangi bir Chromium ikili dosyasını `executable_path` olarak deneriz."""
+    browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if not browsers_path:
+        return None
+    patterns = [
+        os.path.join(browsers_path, "chromium-*", "chrome-linux", "chrome"),
+        os.path.join(browsers_path, "chromium-*", "chrome-mac", "*.app", "Contents", "MacOS", "*"),
+        os.path.join(browsers_path, "chromium-*", "chrome-win", "chrome.exe"),
+    ]
+    for pattern in patterns:
+        matches = sorted(glob.glob(pattern))
+        if matches:
+            return matches[-1]
+    return None
 
 
 class BrowserScraper:
@@ -49,9 +73,22 @@ class BrowserScraper:
         try:
             self._browser = self._playwright.chromium.launch(headless=self.headless)
         except Exception as exc:  # noqa: BLE001 - tarayıcı ikili dosyası eksik olabilir
-            self._playwright.stop()
-            self._playwright = None
-            raise BrowserScraperError(f"Chromium başlatılamadı: {exc}") from exc
+            fallback_executable = _find_preinstalled_chromium()
+            if fallback_executable is None:
+                self._playwright.stop()
+                self._playwright = None
+                raise BrowserScraperError(f"Chromium başlatılamadı: {exc}") from exc
+            try:
+                self._browser = self._playwright.chromium.launch(
+                    headless=self.headless, executable_path=fallback_executable
+                )
+            except Exception as fallback_exc:  # noqa: BLE001
+                self._playwright.stop()
+                self._playwright = None
+                raise BrowserScraperError(
+                    f"Chromium başlatılamadı (varsayılan hata: {exc}; "
+                    f"önceden-kurulu '{fallback_executable}' ile de başarısız: {fallback_exc})"
+                ) from fallback_exc
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
