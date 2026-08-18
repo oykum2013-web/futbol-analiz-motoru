@@ -6,6 +6,9 @@ Kullanım:
 
     # Gerçek veri ile (football-data.org, FOOTBALL_DATA_API_TOKEN gerektirir):
     python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --match-id 12345
+
+    # Sakatlık/kadro verisi de dahil etmek için (API-Football, API_FOOTBALL_KEY gerektirir):
+    python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --season 2025
 """
 
 import argparse
@@ -17,6 +20,8 @@ from .agents.data_collection import (
     normalize_football_data_matches,
 )
 from .agents.orchestrator import format_report_markdown, run_pipeline
+from .agents.squad_analysis import normalize_api_football_injuries
+from .clients.api_football import ApiFootballClient, ApiFootballClientError
 from .clients.football_data import FootballDataClient
 from .schemas import TeamRef
 
@@ -25,16 +30,36 @@ def run_demo() -> str:
     from .sample_data.demo_match import (
         H2H_MACLAR,
         TAKIM_A,
+        TAKIM_A_EKSIKLER,
         TAKIM_A_SON_MACLAR,
         TAKIM_B,
+        TAKIM_B_EKSIKLER,
         TAKIM_B_SON_MACLAR,
     )
 
-    report = run_pipeline(TAKIM_A, TAKIM_B, TAKIM_A_SON_MACLAR, TAKIM_B_SON_MACLAR, H2H_MACLAR)
+    report = run_pipeline(
+        TAKIM_A,
+        TAKIM_B,
+        TAKIM_A_SON_MACLAR,
+        TAKIM_B_SON_MACLAR,
+        H2H_MACLAR,
+        TAKIM_A_EKSIKLER,
+        TAKIM_B_EKSIKLER,
+    )
     return format_report_markdown(report)
 
 
-def run_live(home_team_id: str, away_team_id: str, home_name: str, away_name: str) -> str:
+def _fetch_missing_players(team_id: str, season: int):
+    """API_FOOTBALL_KEY tanımlıysa sakatlık/kadro verisini çeker; yoksa sessizce atlar."""
+    try:
+        client = ApiFootballClient()
+    except ApiFootballClientError:
+        return None
+    raw = client.get_team_injuries(int(team_id), season)
+    return normalize_api_football_injuries(raw)
+
+
+def run_live(home_team_id: str, away_team_id: str, home_name: str, away_name: str, season: int) -> str:
     client = FootballDataClient()
     home_team = TeamRef(id=home_team_id, name=home_name)
     away_team = TeamRef(id=away_team_id, name=away_name)
@@ -47,7 +72,12 @@ def run_live(home_team_id: str, away_team_id: str, home_name: str, away_name: st
     # H2H: iki takımın maç listelerinin birleşiminden ortak karşılaşmaları çıkar.
     h2h_matches = filter_h2h_matches(home_matches + away_matches, home_team_id, away_team_id)
 
-    report = run_pipeline(home_team, away_team, home_matches, away_matches, h2h_matches)
+    home_missing = _fetch_missing_players(home_team_id, season)
+    away_missing = _fetch_missing_players(away_team_id, season)
+
+    report = run_pipeline(
+        home_team, away_team, home_matches, away_matches, h2h_matches, home_missing, away_missing
+    )
     return format_report_markdown(report)
 
 
@@ -58,6 +88,12 @@ def main() -> None:
     parser.add_argument("--away-team-id", help="football-data.org deplasman takım ID'si")
     parser.add_argument("--home-name", default="Ev Sahibi", help="Raporda gösterilecek ev sahibi adı")
     parser.add_argument("--away-name", default="Deplasman", help="Raporda gösterilecek deplasman adı")
+    parser.add_argument(
+        "--season",
+        type=int,
+        default=2025,
+        help="API-Football sakatlık sorgusu için sezon yılı (API_FOOTBALL_KEY tanımlıysa kullanılır)",
+    )
     args = parser.parse_args()
 
     if args.demo:
@@ -68,7 +104,7 @@ def main() -> None:
         parser.error("--demo kullanmıyorsanız --home-team-id ve --away-team-id zorunludur")
 
     try:
-        print(run_live(args.home_team_id, args.away_team_id, args.home_name, args.away_name))
+        print(run_live(args.home_team_id, args.away_team_id, args.home_name, args.away_name, args.season))
     except Exception as exc:  # noqa: BLE001 - CLI için kullanıcıya okunabilir hata gösterimi
         print(f"Hata: {exc}", file=sys.stderr)
         sys.exit(1)

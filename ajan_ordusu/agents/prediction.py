@@ -5,13 +5,16 @@ tahmini üretir. Bilinçli olarak basit ve açıklanabilir bir sezgisel (heurist
 model kullanır — rastgele sayı üretmez, "kesin sonuç" iddia etmez.
 """
 
-from ..schemas import FormReport, H2HReport, Prediction
+from typing import Optional
+
+from ..schemas import FormReport, H2HReport, Prediction, SquadReport
 
 HOME_ADVANTAGE = 0.15
 MIN_STRENGTH = 0.05
 H2H_WEIGHT = 0.3
 DRAW_BASE = 0.20
 DRAW_CLOSENESS_WEIGHT = 0.15
+SQUAD_IMPACT_WEIGHT = 0.4
 
 
 def _team_strength(form: FormReport) -> float:
@@ -23,7 +26,13 @@ def _team_strength(form: FormReport) -> float:
     return max(MIN_STRENGTH, points_per_game + goal_diff_per_game * 0.5)
 
 
-def predict(home_form: FormReport, away_form: FormReport, h2h: H2HReport) -> Prediction:
+def predict(
+    home_form: FormReport,
+    away_form: FormReport,
+    h2h: H2HReport,
+    home_squad: Optional[SquadReport] = None,
+    away_squad: Optional[SquadReport] = None,
+) -> Prediction:
     home_strength = _team_strength(home_form) + HOME_ADVANTAGE
     away_strength = _team_strength(away_form)
 
@@ -47,6 +56,19 @@ def predict(home_form: FormReport, away_form: FormReport, h2h: H2HReport) -> Pre
         )
     else:
         rationale.append("H2H verisi bulunamadı, bu faktör tahmine dahil edilmedi.")
+
+    if home_squad is not None and home_squad.impact_score > 0:
+        home_strength -= home_squad.impact_score * SQUAD_IMPACT_WEIGHT
+        rationale.append(
+            f"{home_squad.team.name} kadro etkisi: {home_squad.impact_level} "
+            f"({len(home_squad.missing_players)} eksik oyuncu)"
+        )
+    if away_squad is not None and away_squad.impact_score > 0:
+        away_strength -= away_squad.impact_score * SQUAD_IMPACT_WEIGHT
+        rationale.append(
+            f"{away_squad.team.name} kadro etkisi: {away_squad.impact_level} "
+            f"({len(away_squad.missing_players)} eksik oyuncu)"
+        )
 
     home_strength = max(home_strength, MIN_STRENGTH)
     away_strength = max(away_strength, MIN_STRENGTH)

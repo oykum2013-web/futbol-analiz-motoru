@@ -2,7 +2,8 @@ from ajan_ordusu.agents.form_analysis import analyze_form
 from ajan_ordusu.agents.h2h_analysis import analyze_h2h
 from ajan_ordusu.agents.orchestrator import run_pipeline
 from ajan_ordusu.agents.prediction import predict
-from ajan_ordusu.schemas import MatchResult, TeamRef
+from ajan_ordusu.agents.squad_analysis import analyze_squad
+from ajan_ordusu.schemas import InjuryEntry, MatchResult, PlayerRef, TeamRef
 
 A = TeamRef(id="a", name="Takım A")
 B = TeamRef(id="b", name="Takım B")
@@ -86,3 +87,43 @@ def test_run_pipeline_end_to_end_with_demo_style_data():
     assert report.prediction.away.name == "Takım B"
     assert report.home_form.matches_considered == 1
     assert report.h2h.matches_considered == 1
+    assert report.home_squad.impact_level == "Yok"
+
+
+def test_analyze_squad_with_no_missing_players_has_no_impact():
+    squad = analyze_squad(A, [])
+    assert squad.impact_score == 0.0
+    assert squad.impact_level == "Yok"
+
+
+def test_analyze_squad_weighs_key_players_more():
+    normal_only = analyze_squad(
+        A, [InjuryEntry(PlayerRef(id="p1", name="Oyuncu 1"), "Sakatlık", importance=1.0)]
+    )
+    with_key_player = analyze_squad(
+        A, [InjuryEntry(PlayerRef(id="p2", name="Yıldız Oyuncu"), "Sakatlık", importance=2.0)]
+    )
+
+    assert with_key_player.impact_score > normal_only.impact_score
+    assert with_key_player.impact_score <= 1.0
+
+
+def test_predict_lowers_probability_for_team_with_high_squad_impact():
+    even_form_home = analyze_form(A, [MatchResult("2026-01-01", A, B, 1, 1)], n=1)
+    even_form_away = analyze_form(B, [MatchResult("2026-01-01", A, B, 1, 1)], n=1)
+    empty_h2h = analyze_h2h(A, B, [], n=5)
+
+    baseline = predict(even_form_home, even_form_away, empty_h2h)
+
+    depleted_home_squad = analyze_squad(
+        A,
+        [
+            InjuryEntry(PlayerRef(id="p1", name="Oyuncu 1"), "Sakatlık", importance=2.0),
+            InjuryEntry(PlayerRef(id="p2", name="Oyuncu 2"), "Cezalı", importance=2.0),
+            InjuryEntry(PlayerRef(id="p3", name="Oyuncu 3"), "Sakatlık", importance=2.0),
+        ],
+    )
+    with_injuries = predict(even_form_home, even_form_away, empty_h2h, home_squad=depleted_home_squad)
+
+    assert with_injuries.home_win_prob < baseline.home_win_prob
+    assert any("kadro etkisi" in r.lower() for r in with_injuries.rationale)

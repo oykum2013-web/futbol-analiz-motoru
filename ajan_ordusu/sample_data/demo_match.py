@@ -4,7 +4,7 @@ DİKKAT: Takım adları ve maç sonuçları tamamen kurgusaldır, gerçek bir ta
 veya maç sonucunu temsil etmez. Sadece pipeline'ı test etmek içindir.
 """
 
-from ..schemas import MatchResult, TeamRef
+from ..schemas import InjuryEntry, MatchResult, PlayerRef, TeamRef
 
 TAKIM_A = TeamRef(id="demo-a", name="Yıldız Spor (DEMO)")
 TAKIM_B = TeamRef(id="demo-b", name="Deniz Yıldızı FK (DEMO)")
@@ -36,3 +36,12 @@ H2H_MACLAR = [
     MatchResult("2025-11-15", TAKIM_A, TAKIM_B, 2, 0, "Demo Lig"),
     MatchResult("2025-04-06", TAKIM_B, TAKIM_A, 1, 1, "Demo Lig"),
 ]
+
+# Takım A'nın eksik oyuncuları (kurgusal) — biri kilit oyuncu (importance=2.0)
+TAKIM_A_EKSIKLER = [
+    InjuryEntry(PlayerRef(id="p1", name="O. Kurgusal", position="Forvet"), "Sakatlık", importance=2.0),
+    InjuryEntry(PlayerRef(id="p2", name="B. Örnekoğlu", position="Defans"), "Cezalı", importance=1.0),
+]
+
+# Takım B'nin eksik oyuncuları (kurgusal) — kadro derinliği daha az etkilenmiş
+TAKIM_B_EKSIKLER: list = []

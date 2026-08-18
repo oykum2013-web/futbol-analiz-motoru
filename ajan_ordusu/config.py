@@ -6,7 +6,12 @@ Hiçbir API anahtarı kod içine gömülmez; her zaman ortam değişkeninden oku
 import os
 
 FOOTBALL_DATA_API_TOKEN = os.environ.get("FOOTBALL_DATA_API_TOKEN")
+API_FOOTBALL_KEY = os.environ.get("API_FOOTBALL_KEY")
 
 # Form/H2H ajanlarının varsayılan olarak dikkate alacağı maç sayısı.
 DEFAULT_FORM_MATCHES = 5
 DEFAULT_H2H_MATCHES = 5
+
+# Sakatlık/Kadro Ajanı'nın etki skorunu ölçeklendirme katsayısı
+# (bkz. agents/squad_analysis.py) — impact_score = min(1.0, katsayı * ağırlıklı eksik sayısı)
+SQUAD_IMPACT_SCALE = 0.10

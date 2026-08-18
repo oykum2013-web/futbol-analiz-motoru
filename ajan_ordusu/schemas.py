@@ -66,6 +66,36 @@ class H2HReport:
 
 
 @dataclass
+class PlayerRef:
+    """Bir oyuncuyu kimliklemek için minimal referans."""
+
+    id: str
+    name: str
+    position: Optional[str] = None
+
+
+@dataclass
+class InjuryEntry:
+    """Sakat/cezalı/eksik tek bir oyuncu kaydı."""
+
+    player: PlayerRef
+    reason: str  # örn. "Sakatlık", "Cezalı", "Kadro Dışı"
+    # Oyuncunun takım için önemi (1.0 = normal, >1.0 = kilit oyuncu). Veri yoksa 1.0 varsayılır.
+    importance: float = 1.0
+
+
+@dataclass
+class SquadReport:
+    """Sakatlık/Kadro Ajanı çıktısı: eksik oyuncuların takım gücüne etkisi."""
+
+    team: TeamRef
+    missing_players: List[InjuryEntry] = field(default_factory=list)
+    impact_score: float = 0.0  # 0.0 (etkisiz) .. 1.0 (çok yüksek etki)
+    impact_level: str = "Yok"  # "Yok" | "Düşük" | "Orta" | "Yüksek"
+    notes: List[str] = field(default_factory=list)
+
+
+@dataclass
 class Prediction:
     """Tahmin Ajanı çıktısı: olasılık tabanlı maç sonucu tahmini."""
 
