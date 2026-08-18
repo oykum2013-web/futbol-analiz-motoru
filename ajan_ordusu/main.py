@@ -20,6 +20,7 @@ Kullanım:
 """
 
 import argparse
+import logging
 import sys
 from typing import Optional
 
@@ -38,6 +39,8 @@ from .clients.api_football import ApiFootballClient, ApiFootballClientError
 from .clients.football_data import FootballDataClient
 from .clients.the_odds_api import TheOddsApiClient, TheOddsApiClientError
 from .schemas import TeamRef
+
+logger = logging.getLogger(__name__)
 
 DEMO_BANNER = (
     "⚠️⚠️ BU BİR DEMO RAPORUDUR — takım adları ve tüm veriler tamamen "
@@ -128,10 +131,13 @@ def _safe_get_team_matches(client: FootballDataClient, team_id: str) -> list:
     ajanlarında zaten "veri yok" olarak doğru şekilde raporlanır (bkz. veri
     bütünlüğü kuralı: eksik veri sessizce uydurulmaz, ama tek bir maçın
     verisi alınamadı diye TÜM bülten de çökertilmez).
+
+    Hata yutulmuyor — teşhis edilebilmesi için loglanıyor (bkz. sunucu logları).
     """
     try:
         return client.get_team_matches(int(team_id), status="FINISHED", limit=10)
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as exc:
+        logger.warning("Takım %s için maç verisi çekilemedi: %s", team_id, exc)
         return []
 
 
