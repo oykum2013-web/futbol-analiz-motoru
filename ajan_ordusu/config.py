@@ -21,7 +21,7 @@ SQUAD_IMPACT_SCALE = 0.10
 # (bkz. agents/prediction.py) — 0.5 = eşit ağırlık.
 MARKET_BLEND_WEIGHT = 0.5
 
-# football-data.org ücretsiz plan dakikada 10 istekle sınırlıdır. Bülten modu
-# birden çok maç için art arda istek attığından, istekler arasında bu kadar
-# saniye beklenir (güvenlik payıyla ~9 istek/dk) — bkz. main.py _RateLimiter.
+# football-data.org ücretsiz plan dakikada 10 istekle sınırlıdır. İstemci,
+# tüm çağrıları (farklı HTTP isteklerinden gelenler dahil) bu kadar saniye
+# aralıklandırır (güvenlik payıyla ~9 istek/dk) — bkz. clients/football_data.py.
 FOOTBALL_DATA_REQUEST_DELAY_SECONDS = 6.5
