@@ -1,3 +1,4 @@
+from ajan_ordusu.agents.bulletin import format_bulletin_markdown, format_bulletin_message
 from ajan_ordusu.agents.form_analysis import analyze_form
 from ajan_ordusu.agents.h2h_analysis import analyze_h2h
 from ajan_ordusu.agents.market_analysis import analyze_market
@@ -202,3 +203,50 @@ def test_predict_notes_missing_market_data_without_faking_it():
     prediction = predict(form_home, form_away, empty_h2h, market=no_market)
 
     assert any("VERİ YOK" in n or "bulunamadı" in n.lower() for n in [prediction.rationale[-1]])
+
+
+C = TeamRef(id="c", name="Takım C")
+D = TeamRef(id="d", name="Takım D")
+
+
+def test_bulletin_flags_low_confidence_and_data_gaps():
+    well_supported = run_pipeline(
+        A,
+        B,
+        [MatchResult("2026-01-01", A, B, 2, 0)],
+        [MatchResult("2026-01-01", A, B, 2, 0)],
+        [MatchResult("2026-01-01", A, B, 2, 0)],
+        [],  # sakatlık kaynağı sorgulandı, eksik yok
+        [],
+        [OddsQuote(bookmaker="Kitapçı", home_odds=1.80, draw_odds=3.60, away_odds=4.20)],
+    )
+    no_data_match = run_pipeline(C, D, [], [], [])  # hiç veri yok -> tüm ajanlar "veri yok" demeli
+
+    bulletin = format_bulletin_markdown([well_supported, no_data_match], title="Test Bülteni")
+
+    assert "Test Bülteni" in bulletin
+    assert "RİSK UYARISI" in bulletin
+    # İyi desteklenen maç için "eksik veri yok" görülmeli.
+    assert "yok (tüm kaynaklar sorgulandı)" in bulletin
+    # Veri eksikliği olan maç için uyarı ve gerekçe görülmeli.
+    assert "Yetersiz Veri" in bulletin
+    assert "form verisi yok" in bulletin
+    assert "kadro/sakatlık verisi yok" in bulletin
+    assert "Oran/piyasa verisi yok" in bulletin
+
+
+def test_bulletin_markdown_handles_empty_match_list():
+    bulletin = format_bulletin_markdown([], title="Boş Bülten")
+    assert "Boş Bülten" in bulletin
+    assert "bulunamadı" in bulletin.lower()
+    assert "RİSK UYARISI" in bulletin
+
+
+def test_bulletin_message_format_is_compact_and_still_warns():
+    no_data_match = run_pipeline(C, D, [], [], [])
+    message = format_bulletin_message([no_data_match], title="Kısa Bülten")
+
+    assert "Kısa Bülten" in message
+    assert "RİSK UYARISI" in message
+    assert "⚠️" in message
+    assert "Eksik veri" in message

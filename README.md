@@ -12,8 +12,10 @@ analiz eden ve olasılık tabanlı tahmin üreten bir sistem.
   - Sakatlık/Kadro (`agents/squad_analysis.py`) — eksik/cezalı oyuncuların takım gücüne etkisini skorlar (API-Football)
   - Oran/Piyasa (`agents/market_analysis.py`) — gerçek bahis oranlarından zımni olasılıkları hesaplar (The Odds API)
   - Tahmin (`agents/prediction.py`) — form + H2H + kadro + piyasa etkisini birleştirip olasılık tabanlı tahmin üretir
-  - Orkestratör (`agents/orchestrator.py`) — yukarıdakileri sırayla çalıştırıp Markdown rapor üretir
-  - Henüz eklenmedi: Rapor & Bülten Ajanı, n8n entegrasyonu
+  - Orkestratör (`agents/orchestrator.py`) — yukarıdakileri sırayla çalıştırıp tek maç için Markdown rapor üretir
+  - Rapor & Bülten (`agents/bulletin.py`) — birden çok maçın sonucunu günlük/haftalık bültene dönüştürür;
+    her maç için güven düzeyini, eksik veri uyarılarını ("VERİ YOK"/"Yetersiz Veri") ve risk uyarısını gösterir
+  - Henüz eklenmedi: n8n ile zamanlanmış çalıştırma/dağıtım entegrasyonu
 - **`index.html` + `api/matches.js`** — ayrı, mevcut basit JS/Vercel canlı skor arayüzü (ajan ordusundan bağımsız)
 
 ## Veri bütünlüğü kuralı (kesin)
@@ -48,12 +50,18 @@ export API_FOOTBALL_KEY=...          # https://www.api-football.com/pricing
 export THE_ODDS_API_KEY=...          # https://the-odds-api.com/
 python -m ajan_ordusu.main --home-team-id 524 --away-team-id 61 --sport-key soccer_epl
 
+# Ağ/anahtar gerektirmeyen çok maçlı bülten örneği (biri eksik verili, uyarıları gösterir):
+python -m ajan_ordusu.main --bulletin-demo
+
+# Gerçek veriyle günlük/haftalık bülten (bir lig + tarih aralığındaki tüm maçlar):
+python -m ajan_ordusu.main --bulletin --competition PL --date-from 2026-08-18 --date-to 2026-08-18
+
 # Testler
 pytest
 ```
 
 Tahminler olasılık tabanlıdır, kesin sonuç garantisi vermez — bu uyarı her
-raporun sonunda otomatik olarak yer alır.
+raporun ve bültenin başında/sonunda otomatik olarak yer alır.
 
 ## api/matches.js hakkında not
 
