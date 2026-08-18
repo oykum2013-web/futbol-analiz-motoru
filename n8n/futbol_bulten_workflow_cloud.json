@@ -1,0 +1,97 @@
+{
+  "name": "Futbol Analiz Motoru - Günlük Bülten (n8n Cloud, e-posta ile)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Günlük Tetikleyici (08:00)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.AJAN_ORDUSU_API_URL }}/bulletin",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "competition", "value": "={{ $env.AJAN_ORDUSU_COMPETITION }}" },
+            { "name": "date_from", "value": "={{ $now.toFormat('yyyy-LL-dd') }}" },
+            { "name": "date_to", "value": "={{ $now.toFormat('yyyy-LL-dd') }}" },
+            { "name": "season", "value": "={{ $env.AJAN_ORDUSU_SEASON }}" },
+            { "name": "sport_key", "value": "={{ $env.AJAN_ORDUSU_SPORT_KEY }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-request-bulletin",
+      "name": "Bülteni Getir (HTTP API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "markdown",
+        "options": {
+          "fileName": "={{ 'bulten-' + $now.toFormat('yyyy-LL-dd') + '.md' }}"
+        }
+      },
+      "id": "convert-to-file",
+      "name": "Markdown'a Dönüştür",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.AJAN_ORDUSU_SMTP_FROM }}",
+        "toEmail": "={{ $env.AJAN_ORDUSU_NOTIFY_EMAIL }}",
+        "subject": "={{ 'Günlük Tahmin Bülteni - ' + $now.toFormat('yyyy-LL-dd') }}",
+        "text": "={{ $json.risk_warning }}\n\nBülten ek dosyada. Toplam maç sayısı: {{ $json.match_count }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              { "property": "data" }
+            ]
+          }
+        }
+      },
+      "id": "send-email",
+      "name": "E-postayla Gönder",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [900, 300],
+      "credentials": {
+        "smtp": {
+          "id": null,
+          "name": "Ajan Ordusu SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Günlük Tetikleyici (08:00)": {
+      "main": [[{ "node": "Bülteni Getir (HTTP API)", "type": "main", "index": 0 }]]
+    },
+    "Bülteni Getir (HTTP API)": {
+      "main": [[{ "node": "Markdown'a Dönüştür", "type": "main", "index": 0 }]]
+    },
+    "Markdown'a Dönüştür": {
+      "main": [[{ "node": "E-postayla Gönder", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
