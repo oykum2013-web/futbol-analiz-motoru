@@ -1,5 +1,14 @@
 export default async function handler(req, res) {
-  const API_KEY = "sadudtmdHgrsrOu2Wnx89hDWP20YobKyifAR7wl5";
+  // API anahtarı artık kod içine gömülmüyor; Vercel proje ayarlarından
+  // SPORTDB_API_KEY ortam değişkeni olarak tanımlanmalı.
+  // NOT: Daha önce burada sabit kodlanmış bir anahtar vardı ve git geçmişinde
+  // hâlâ görünür durumda — o anahtar sağlayıcı tarafında iptal edilmeli/rotate edilmeli.
+  const API_KEY = process.env.SPORTDB_API_KEY;
+
+  if (!API_KEY) {
+    res.status(500).json({ error: "SPORTDB_API_KEY ortam değişkeni tanımlı değil" });
+    return;
+  }
 
   try {
     const response = await fetch(
