@@ -2,6 +2,9 @@
 
 Son doğrulama: 2026-08-19
 
+## Güç puanı (Elo benzeri)
+- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+
 ## Kadro
 - Sakat/cezalı: doğrulanamadı (araştırılmadı)
 

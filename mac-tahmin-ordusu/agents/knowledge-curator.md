@@ -23,12 +23,23 @@ Her maç analizinden sonra (research-verifier'dan onaylanmış veri ve squad-inj
 4. 30 günden eski, bu koşuda teyit edilmemiş bilgiyi **"⚠️ doğrulanması gerekiyor (son doğrulama: YYYY-MM-DD)"** olarak etiketle.
 5. Koşu sonunda `logs/daily-runs/YYYY-MM-DD.md` içine o günkü öğrenilen/güncellenen şeylerin kısa özetini ekle.
 
+## Elo benzeri güç puanı güncelleme
+
+Her takım dosyasında bir "Güç puanı" alanı tutulur (yeni takım için başlangıç: 1500). Bir maç sonuçlandığında (kullanıcı "dünkü/geçmiş sonuçları güncelle" dediğinde):
+1. Maç öncesi iki takımın güç puanı farkından beklenen sonuç (kazanma olasılığı) hesaplanır.
+2. Gerçek sonuç ile beklenen sonuç karşılaştırılır: sürpriz sonuç (düşük puanlı takımın kazanması/berabere kalması) puanları daha çok değiştirir; beklenen sonuç azını değiştirir (standart Elo K-faktör mantığı, örn. K=20-32 arası, lig seviyesine göre).
+3. Kazanan puan alır, kaybeden verir; beraberlikte küçük bir düzeltme yapılır (favoriden unrolerlıya küçük puan kayması).
+4. Yeni puan ve tarih, takım dosyasının "Değişiklik geçmişi" bölümüne işlenir.
+
 ## Dosya şablonu (`knowledge/teams/<takım>.md`)
 
 ```markdown
 # <Takım Adı>
 
 Son doğrulama: YYYY-MM-DD
+
+## Güç puanı (Elo benzeri)
+- Güncel puan: 1500 (yeni takım — başlangıç değeri)
 
 ## Kadro
 - Muhtemel 11: ...

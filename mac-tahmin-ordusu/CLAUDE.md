@@ -19,6 +19,16 @@ Kullanıcı "bugünün maçlarını analiz et" (veya benzeri) dediğinde, o gün
 5. **Hata sessizce geçilmez.** Veri eksikliği/belirsizlik açıkça raporda belirtilir ("bu bilgi doğrulanamadı" / "veri yok").
 6. **Sorumlu oyun uyarısı** her raporun sonunda yer alır.
 7. **Bilgi bankası bütünlüğü:** `knowledge-curator` dışında hiçbir ajan `knowledge/` klasörüne doğrudan yazmaz. Çelişkili bilgi üzerine yazılmaz; tarihli not olarak eklenir.
+8. **İlk yarı/maç sonucu (İY/MS) ayrı bir pazardır.** Maç sonucu (MS) oranları/olasılıkları İY/MS tahmini için kaynak sayılmaz — İY/MS için ayrıca, doğrudan kaynak kontrolü yapılır (ilk yarı gol istatistikleri, İY/MS'ye özel oran/tahmin kaynakları). Doğrudan kaynak bulunamazsa, MS modelinden + genel ilk yarı gol eğilimlerinden (kaynağı belirtilerek) türetilmiş bir tahmin sunulabilir ama bu **açıkça "türetilmiş tahmin, doğrudan kaynaklanmamıştır" notuyla** işaretlenir. **Her maçın analizinin sonuna, o maça özel bu notla birlikte İlk Yarı Sonucu ve Maç Sonucu (İY/MS) tahmini eklenir** — rapor formatına bakınız.
+
+## Model metodolojisi (profesyonel yaklaşım — kalıcı, her koşuda uygulanır)
+
+Bu sistem, profesyonel futbol tahmin modellerinin kullandığı yöntemleri taklit eder (araştırma kaynağı: dashee87.github.io, statsultra.com, scoresportsx.com — Dixon-Coles/Elo/ensemble literatürü). `statistical-model` ajanı her maçta şu dört bileşeni uygular:
+
+1. **Dixon-Coles tipi Poisson modeli:** Her takım için atak gücü (attığı gol / lig ortalaması) ve savunma zayıflığı (yediği gol / lig ortalaması) parametreleri, iki bağımsız Poisson değişkeni olarak ev sahibi/deplasman beklenen gol sayısını (λ) üretir. Düşük skorlu sonuçlarda (0-0, 1-0, 0-1, 1-1) standart Poisson'un beraberlikleri hafife alma eğilimini düzeltmek için bu skorların olasılığı yukarı ayarlanır. Yakın tarihli maçlara daha fazla ağırlık verilir (son 5-10 maç, daha eski maçlardan daha belirleyici).
+2. **Elo benzeri güç puanı:** Her takım için `knowledge/teams/<takım>.md` dosyasında bir "Güç puanı" alanı tutulur (varsayılan başlangıç: 1500). Her sonuçtan sonra `knowledge-curator`, beklenen sonuca göre puan transferi yapar — sürpriz sonuçlar (düşük puanlının yüksek puanlıyı yenmesi) puanı daha çok değiştirir, beklenen sonuçlar azını değiştirir. Bu puan farkı, maçın kazanma olasılığına dönüştürülüp modele girdi olarak kullanılır.
+3. **Piyasa ile harmanlama (ensemble):** Poisson/Elo modelinin çıktısı, `odds-market-analyst`'ın zımni piyasa olasılığıyla harmanlanır. Veri zengin liglerde (çok kaynak, çok geçmiş maç) kendi modeline daha fazla ağırlık verilir; veri kıt liglerde piyasaya daha fazla ağırlık verilir. Büyük sapmalar gerekçelendirilir (rule: statistical-model çıktı formatı).
+4. **Kalibrasyon takibi (self-improvement):** Doğruluk (isabet) tek başına yeterli bir ölçüt değildir — asıl hedef **kalibrasyon**dur: modelin "%60 ihtimalle" dediği maçların gerçekten yaklaşık %60'ının o şekilde sonuçlanması. Kullanıcı "dünkü/geçmiş sonuçları güncelle" dediğinde, `knowledge/model-performance.md` içine sonuçlar işlenir ve basit bir kalibrasyon özeti çıkarılır (örn. "%50-60 aralığında tahmin edilen maçların gerçek isabet oranı %X"). Model aşırı özgüvenliyse (yüksek yüzdeler verip tutmuyorsa) veya çekingense (düşük yüzdeler verip sürekli tutuyorsa), bir sonraki koşularda güven seviyesi/yüzdeler buna göre hafifçe ayarlanır ve bu ayarlama `model-performance.md`'de gerekçesiyle not edilir.
 
 ## Klasör yapısı
 
@@ -73,10 +83,12 @@ Kurallar:
    Form: A son 5: ... | B son 5: ...
    H2H (son 5): ...
    Kadro: ...
-   Model tahmini: A %.. – Beraberlik %.. – B %..
+   Model tahmini (Maç Sonucu): A %.. – Beraberlik %.. – B %..
    Olası skor: .. / ..
    Güven seviyesi: ..
    Kaynaklar: [...]
+   İlk Yarı / Maç Sonucu (İY/MS): İlk yarı A %.. – Beraberlik %.. – B %.. | En olası İY/MS kombinasyonu: .. / ..
+   (Not: İY/MS ayrı bir pazardır — MS oranından türetilmemiştir; doğrudan kaynağı: [...]. Doğrudan kaynak yoksa: "türetilmiş tahmin, doğrudan kaynaklanmamıştır" notu.)
 
 2) ...
 

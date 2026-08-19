@@ -2,6 +2,9 @@
 
 Son doğrulama: 2026-08-19
 
+## Güç puanı (Elo benzeri)
+- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+
 ## Kadro
 - Sakat: Celio Pompeu (diz), Tyson Pearce (kalça) — ⚠️ tek kaynaklı (sportsgambler.com), ikinci kaynakla doğrulanamadı, teyide muhtaç.
 - Öne çıkan oyuncu: Simon Becher (son 10 maçta 3 gol), Marcel Hartel (takımın gol kralı).

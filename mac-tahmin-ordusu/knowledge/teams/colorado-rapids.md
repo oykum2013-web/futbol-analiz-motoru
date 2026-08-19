@@ -2,6 +2,9 @@
 
 Son doğrulama: 2026-08-19
 
+## Güç puanı (Elo benzeri)
+- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+
 ## Kadro
 - Genç savunmacı Lucas Herrington, Hull City'ye rekor bedelle transfer edildi (savunmayı zayıflatabilir).
 - Diğer sakatlık/ceza bilgisi doğrulanamadı.

@@ -2,6 +2,9 @@
 
 Son doğrulama: 2026-08-19
 
+## Güç puanı (Elo benzeri)
+- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+
 ## Kadro
 - Sakat/cezalı: bildirilen yok (2026-08-19 itibarıyla).
 - Öne çıkan oyuncu: Dejan Joveljic (son 10 maçta 4 gol), Calvin Harris (2 gol).

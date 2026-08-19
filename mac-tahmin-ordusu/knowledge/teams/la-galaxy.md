@@ -2,6 +2,9 @@
 
 Son doğrulama: 2026-08-19
 
+## Güç puanı (Elo benzeri)
+- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+
 ## Kadro
 - João Klauss (forvet): sakatlıktan dönüyor.
 - Hirving "Chucky" Lozano: yeni Designated Player transferi, ev sahibi debütü bekleniyor.
