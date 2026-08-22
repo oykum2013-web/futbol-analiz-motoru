@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1500 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - Sakat: Celio Pompeu (diz), Tyson Pearce (kalça) — ⚠️ tek kaynaklı (sportsgambler.com), ikinci kaynakla doğrulanamadı, teyide muhtaç.
@@ -23,4 +23,5 @@ Son doğrulama: 2026-08-19
 - sportsgambler.com, oursportscentral.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: Sporting KC ile deplasmanda 1-1 berabere kaldı (model kendi galibiyetini bekliyordu). Güç puanı değişmedi (1500).
 - 2026-08-19: Dosya oluşturuldu.

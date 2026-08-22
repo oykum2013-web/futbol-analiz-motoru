@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1500 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - Sakat/cezalı: bildirilen yok (2026-08-19 itibarıyla).
@@ -23,4 +23,5 @@ Son doğrulama: 2026-08-19
 - sportsgambler.com, oursportscentral.com, goal.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: St. Louis City ile evinde 1-1 berabere kaldı (model STL galibiyeti bekliyordu). Güç puanı değişmedi (1500).
 - 2026-08-19: Dosya oluşturuldu. 19 Ağustos I-70 Derby (Sporting KC – St. Louis City SC) analizi için ilk kayıt.

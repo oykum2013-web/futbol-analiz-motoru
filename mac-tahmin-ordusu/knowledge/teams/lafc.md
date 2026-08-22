@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1480 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - Kilit oyuncular: Denis Bouanga (son 10 maçta 7 gol), Son Heung-min (MLS All-Star, ligde asist sıralamasında 2., 10 asist), Hugo Lloris (kaleci, ligde en çok — 10 — clean sheet).
@@ -24,4 +24,5 @@ Son doğrulama: 2026-08-19
 - lafc.com, oursportscentral.com, sportsgambler.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: Colorado Rapids'e deplasmanda 0-1 kaybetti (favori olmasına rağmen). Güç puanı 1500→1480.
 - 2026-08-19: Dosya oluşturuldu.

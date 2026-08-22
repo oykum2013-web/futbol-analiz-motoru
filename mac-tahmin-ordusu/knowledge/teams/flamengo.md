@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1515 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - Sakat/cezalı: doğrulanamadı (araştırılmadı)
@@ -23,4 +23,5 @@ Son doğrulama: 2026-08-19
 - espn.com, gazetaesportiva.com, lance.com.br, sopacultural.com, academiadasapostasbrasil.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: Cruzeiro'yu evinde 2-1 yendi (model tam isabet etti), çeyrek finale yükseldi. Güç puanı 1500→1515.
 - 2026-08-19: Dosya oluşturuldu. 19 Ağustos Flamengo–Cruzeiro (Libertadores Son 16 rövanş) analizi için ilk kayıt.

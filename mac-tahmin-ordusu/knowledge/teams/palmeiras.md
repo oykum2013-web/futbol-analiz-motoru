@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1515 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - Sakat/cezalı: doğrulanamadı (araştırılmadı)
@@ -23,4 +23,5 @@ Son doğrulama: 2026-08-19
 - larepublica.pe, apf.org.py, foxsports.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: Cerro Porteño'yu deplasmanda 1-0 yendi (toplamda 2-1), çeyrek finale yükseldi. Güç puanı 1500→1515.
 - 2026-08-19: Dosya oluşturuldu.

@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1485 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - Öne çıkan oyuncu: Preston Judd (sezonda 11 gol).
@@ -23,4 +23,5 @@ Son doğrulama: 2026-08-19
 - lagalaxy.com, wincomparator.com, sportskeeda.com, sportsgambler.com, oursportscentral.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: LA Galaxy'ye deplasmanda 0-1 kaybetti. Güç puanı 1500→1485.
 - 2026-08-19: Dosya oluşturuldu. Form/sıralama çelişkisi not düşüldü.

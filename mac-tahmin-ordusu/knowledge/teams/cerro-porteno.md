@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1485 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - Sakat/cezalı: doğrulanamadı (araştırılmadı)
@@ -22,4 +22,5 @@ Son doğrulama: 2026-08-19
 - larepublica.pe, apf.org.py, foxsports.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: Palmeiras'a evinde 0-1 kaybetti (toplamda 1-2), Libertadores'ten elendi. Güç puanı 1500→1485.
 - 2026-08-19: Dosya oluşturuldu. 19 Ağustos Cerro Porteño–Palmeiras (Libertadores Son 16 rövanş) analizi için ilk kayıt.

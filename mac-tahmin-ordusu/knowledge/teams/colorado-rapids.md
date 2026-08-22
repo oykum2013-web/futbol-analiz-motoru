@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1520 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - Genç savunmacı Lucas Herrington, Hull City'ye rekor bedelle transfer edildi (savunmayı zayıflatabilir).
@@ -24,4 +24,5 @@ Son doğrulama: 2026-08-19
 - lafc.com, oursportscentral.com, sportsgambler.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: LAFC'yi evinde 1-0 yendi (piyasa/model favorisine karşı sürpriz galibiyet). Güç puanı 1500→1520.
 - 2026-08-19: Dosya oluşturuldu. Sıralama çelişkisi not düşüldü, gelecekte doğrulanması gerekiyor.

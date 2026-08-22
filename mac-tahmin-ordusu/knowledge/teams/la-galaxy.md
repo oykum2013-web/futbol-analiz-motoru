@@ -3,7 +3,7 @@
 Son doğrulama: 2026-08-19
 
 ## Güç puanı (Elo benzeri)
-- Güncel puan: 1500 (başlangıç değeri — henüz sonuç işlenmedi)
+- Güncel puan: 1515 (2026-08-19 sonucu işlendi)
 
 ## Kadro
 - João Klauss (forvet): sakatlıktan dönüyor.
@@ -26,4 +26,5 @@ Son doğrulama: 2026-08-19
 - lagalaxy.com, wincomparator.com, sportskeeda.com, sportsgambler.com
 
 ## Değişiklik geçmişi
+- 2026-08-19: San Jose Earthquakes'i evinde 1-0 yendi (106. California Clásico). Güç puanı 1500→1515.
 - 2026-08-19: Dosya oluşturuldu.
