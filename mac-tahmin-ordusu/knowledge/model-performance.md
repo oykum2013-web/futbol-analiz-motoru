@@ -1,34 +1,65 @@
 # Model Performans Takibi
 
-Bu dosya, geçmişte üretilen tahminlerin gerçek sonuçlarla karşılaştırmasını tutar. Otomatik güncellenmez — kullanıcı "dünkü sonuçları güncelle" (veya benzeri) dediğinde güncellenir.
+Bu dosya, geçmişte üretilen tahminlerin gerçek sonuçlarla karşılaştırmasını tutar. **Artık iki şekilde güncellenir:**
+1. **Otomatik (best-effort):** Kullanıcı "bugünün maçlarını analiz et" dediğinde, akış başlamadan önce (bkz. `CLAUDE.md` → Orkestrasyon akışı, adım 0), henüz bu dosyaya işlenmemiş önceki gün(ler)in raporları için gerçek sonuçlar araştırılır ve bulunabildiği kadarı işlenir. Sonuç bulunamazsa süreç sessizce devam eder, ana akış bloklanmaz.
+2. **Manuel:** Kullanıcı açıkça "dünkü/geçmiş sonuçları güncelle" derse aynı süreç manuel olarak da tetiklenir; bu durumda sonuç kullanıcıya raporlanır.
 
-Amaç: zamanla modelin hangi lig/durumda daha isabetli olduğunu görmek ve bunu rapora "geçmiş performans notu" olarak yansıtabilmek.
+Amaç: zamanla modelin hangi lig/durumda ve hangi güven seviyesinde daha isabetli olduğunu görmek ve bunu rapora periyodik bir "📊 geçmiş performans notu" olarak yansıtabilmek.
 
 ## Kayıt formatı
+
+Her kayıt, lig ve güven seviyesi bazlı kırılım tablolarının hesaplanabilmesi için lig adını ve güven seviyesini açıkça içerir:
 
 ```
 ### YYYY-MM-DD — <Takım A> vs <Takım B> (<Lig>)
 - Model tahmini: A %XX – Beraberlik %YY – B %ZZ (olası skor: ..)
+- Güven seviyesi: [Düşük/Orta/Yüksek]
+- Piyasadan belirgin ayrışan tahmin miydi: [Evet (fark %..) / Hayır]
 - Gerçek sonuç: <skor>
 - Değerlendirme: [tahmin sonucu isabet etti mi (kazanan doğru tahmin edildi mi), skor ne kadar yakındı]
 ```
 
 ## Kalibrasyon takibi (asıl hedef — doğruluktan daha önemli)
 
-Profesyonel tahmin modellerinde tek başına "isabet oranı" yanıltıcıdır; asıl ölçüt **kalibrasyon**dur — modelin "%X ihtimalle" dediği maçların gerçekten yaklaşık %X'inin o şekilde sonuçlanıp sonuçlanmadığı. Yeterli sayıda sonuç birikince (örn. 20+ maç), tahminler olasılık aralıklarına (bucket) göre gruplanıp gerçek isabet oranıyla karşılaştırılır:
+Profesyonel tahmin modellerinde tek başına "isabet oranı" yanıltıcıdır; asıl ölçüt **kalibrasyon**dur — modelin "%X ihtimalle" dediği maçların gerçekten yaklaşık %X'inin o şekilde sonuçlanıp sonuçlanmadığı. Yeterli sayıda sonuç birikince (örn. 20+ maç), tahminler hem genel hem de **lig bazında** ve **güven seviyesi bazında** ayrı ayrı gruplanıp gerçek isabet oranıyla karşılaştırılır:
 
 ```
-### Kalibrasyon tablosu (son güncelleme: YYYY-MM-DD, N=<toplam maç>)
+### Genel kalibrasyon tablosu (son güncelleme: YYYY-MM-DD, N=<toplam maç>)
 | Tahmin edilen olasılık aralığı | Maç sayısı | Gerçek isabet oranı | Değerlendirme |
 |---|---|---|---|
 | %70-100 (yüksek güven) | .. | %.. | [iyi kalibre / aşırı özgüvenli / çekingen] |
 | %50-70 (orta güven) | .. | %.. | ... |
 | %30-50 (düşük güven) | .. | %.. | ... |
 
-Sonuç: [Model genel olarak aşırı özgüvenli mi, çekingen mi, iyi kalibre mi? Bir sonraki koşularda yüzdeler nasıl ayarlanmalı?]
+### Güven seviyesi bazında isabet (Düşük/Orta/Yüksek etiketine göre)
+| Güven seviyesi etiketi | Maç sayısı | Kazanan isabet oranı | Değerlendirme |
+|---|---|---|---|
+| Yüksek | .. | %.. | [beklendiği gibi en isabetli grup mu?] |
+| Orta | .. | %.. | ... |
+| Düşük | .. | %.. | ... |
+
+### Lig/turnuva bazında isabet
+| Lig/Turnuva | Maç sayısı | Kazanan isabet oranı | Not |
+|---|---|---|---|
+| ... | .. | %.. | [bu ligde modelin sistematik bir zayıflığı/güçlü yanı var mı] |
+
+Sonuç: [Model genel olarak aşırı özgüvenli mi, çekingen mi, iyi kalibre mi? Belirli bir ligde veya güven seviyesinde sistematik sapma var mı? Bir sonraki koşularda yüzdeler nasıl ayarlanmalı?]
 ```
 
-Model aşırı özgüvenliyse (örn. %70 dediği maçlar sadece %50 tutuyorsa), sonraki koşularda yüksek güvenli tahminler hafifçe düşürülür (aşağı doğru "sıkıştırılır"); çekingense tam tersi yapılır. Bu ayarlama `statistical-model` ajanı tarafından her koşuda bu dosya okunarak uygulanır (bkz. `CLAUDE.md` → Model metodolojisi, madde 4).
+Model aşırı özgüvenliyse (örn. %70 dediği maçlar sadece %50 tutuyorsa), sonraki koşularda yüksek güvenli tahminler hafifçe düşürülür (aşağı doğru "sıkıştırılır"); çekingense tam tersi yapılır. Bir lig veya güven kategorisi belirgin şekilde kötü kalibreyse, o kategoriye özel bir not düşülür. Bu ayarlama `statistical-model` ajanı tarafından her koşuda bu dosya okunarak uygulanır (bkz. `CLAUDE.md` → Model metodolojisi, madde 4).
+
+## Piyasadan belirgin ayrışan tahminler (ayrı izleme listesi)
+
+`statistical-model`'in model olasılığı ile piyasa zımni olasılığı arasındaki fark ≥%15 puan olduğunda işaretlenen maçlar burada ayrıca listelenir, böylece bu maçların genel ortalamadan daha mı isabetli/isabetsiz çıktığı zamanla görülebilir:
+
+```
+### Piyasa sapması izleme (son güncelleme: YYYY-MM-DD, N=<toplam işaretli maç>)
+| Tarih | Maç | Model % | Piyasa % | Fark | Gerçek sonuç | İsabet mi? |
+|---|---|---|---|---|---|---|
+| ... | ... | .. | .. | .. | ... | [Evet/Hayır] |
+
+Sonuç: [Piyasadan sapan tahminler genel ortalamadan daha mı iyi/kötü çıkıyor? Model bu maçlarda haklı mı çıkıyor yoksa piyasaya güvenmek mi daha isabetli?]
+```
 
 ## Sonuç kayıtları
 
