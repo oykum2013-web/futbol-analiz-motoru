@@ -5,6 +5,7 @@ analiz eden ve olasılık tabanlı tahmin üreten bir sistem.
 
 ## İçerik
 
+- **`mac-tahmin-ordusu/`** — Claude Code subagent ordusu (agents tanımları `.claude/agents/`'ta da mevcuttur). "Bugünün maçlarını analiz et" dendiğinde günün tüm liglerdeki tüm maçlarını tek tek analiz edip `reports/YYYY-MM-DD-mac-analizleri.md` altında tek raporda toplar; öğrendiklerini `mac-tahmin-ordusu/knowledge/` altında kalıcı olarak biriktirir. `ajan_ordusu/`'ndan tamamen bağımsızdır — bkz. [`mac-tahmin-ordusu/README.md`](mac-tahmin-ordusu/README.md).
 - **`ajan_ordusu/`** — Python çoklu ajan tahmin motoru (prototip). Ajanlar:
   - Veri Toplama (`agents/data_collection.py`) — football-data.org / OpenLigaDB çıktısını normalize eder
   - Form Analiz (`agents/form_analysis.py`) — son N maç performansı
