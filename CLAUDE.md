@@ -19,6 +19,9 @@ analiz eden ve olasılık tabanlı tahmin üreten bir sistem.
   - `schemas.py`, `config.py` — veri modelleri ve ayarlar
 - `n8n/` — n8n workflow tanımları (`api.py`'yi günlük tetikler)
 - `index.html` + `api/matches.js` — ajan ordusundan bağımsız, ayrı bir basit JS/Vercel canlı skor arayüzü
+- `mobile/` — Expo/React Native mobil uygulama iskeleti. Şimdilik yalnızca zorunlu
+  onboarding/sorumluluk reddi akışı var (`src/screens/OnboardingScreen.tsx`,
+  `src/constants/legal.ts`); ajan_ordusu API'sine bağlanan tahmin ekranları henüz yok.
 - `tests/` — pytest testleri (`test_agents.py`, `test_api.py`, `test_resilience.py`)
 
 ## Çalıştırma / doğrulama komutları
