@@ -3,6 +3,17 @@ export type TeamRef = {
   name: string;
 };
 
+export type TeamListItem = {
+  id: number;
+  name: string;
+  short_name: string | null;
+};
+
+export type TeamsResponse = {
+  competition: string;
+  teams: TeamListItem[];
+};
+
 export type FormReport = {
   team: TeamRef;
   matches_considered: number;

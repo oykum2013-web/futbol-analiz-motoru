@@ -15,6 +15,7 @@ import { useApiBaseUrl } from '../hooks/useApiBaseUrl';
 import { useDailyQueryLimit } from '../state/dailyUsage';
 import { useSubscription } from '../state/subscription';
 import MatchCard from '../components/MatchCard';
+import TeamPicker from '../components/TeamPicker';
 import PaywallScreen from './PaywallScreen';
 
 const EMPTY_MATCH_FORM = {
@@ -35,6 +36,7 @@ export default function PredictionScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [showMatchForm, setShowMatchForm] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
   const [matchForm, setMatchForm] = useState(EMPTY_MATCH_FORM);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
@@ -190,40 +192,66 @@ export default function PredictionScreen() {
       {showMatchForm && (
         <View style={styles.formBox}>
           <Text style={styles.formHint}>
-            Takım ID'lerini bulmak için sunucudaki /teams uç noktasını kullanın (ör.
-            /teams?competition=PL). Gerçek tahmin için sunucuda football-data.org (ve
-            isteğe bağlı API-Football, The Odds API) anahtarlarının tanımlı olması gerekir.
+            Gerçek tahmin için sunucuda football-data.org (ve isteğe bağlı API-Football,
+            The Odds API) anahtarlarının tanımlı olması gerekir.
           </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ev sahibi takım ID"
-            placeholderTextColor="#5a6472"
-            value={matchForm.homeTeamId}
-            onChangeText={(v) => setMatchForm((f) => ({ ...f, homeTeamId: v }))}
-            autoCapitalize="none"
+
+          <TeamPicker
+            baseUrl={baseUrl}
+            selectedHome={matchForm.homeTeamId ? { id: matchForm.homeTeamId, name: matchForm.homeName } : null}
+            selectedAway={matchForm.awayTeamId ? { id: matchForm.awayTeamId, name: matchForm.awayName } : null}
+            onSelectHome={(team) =>
+              setMatchForm((f) => ({ ...f, homeTeamId: String(team.id), homeName: team.name }))
+            }
+            onSelectAway={(team) =>
+              setMatchForm((f) => ({ ...f, awayTeamId: String(team.id), awayName: team.name }))
+            }
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Ev sahibi takım adı"
-            placeholderTextColor="#5a6472"
-            value={matchForm.homeName}
-            onChangeText={(v) => setMatchForm((f) => ({ ...f, homeName: v }))}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Deplasman takım ID"
-            placeholderTextColor="#5a6472"
-            value={matchForm.awayTeamId}
-            onChangeText={(v) => setMatchForm((f) => ({ ...f, awayTeamId: v }))}
-            autoCapitalize="none"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Deplasman takım adı"
-            placeholderTextColor="#5a6472"
-            value={matchForm.awayName}
-            onChangeText={(v) => setMatchForm((f) => ({ ...f, awayName: v }))}
-          />
+
+          <Pressable
+            style={styles.manualToggle}
+            onPress={() => setShowManualEntry((prev) => !prev)}
+          >
+            <Text style={styles.manualToggleText}>
+              {showManualEntry ? '▲ Elle ID gir' : '▼ Elle ID gir (liste dışı takım için)'}
+            </Text>
+          </Pressable>
+
+          {showManualEntry && (
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="Ev sahibi takım ID"
+                placeholderTextColor="#5a6472"
+                value={matchForm.homeTeamId}
+                onChangeText={(v) => setMatchForm((f) => ({ ...f, homeTeamId: v }))}
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Ev sahibi takım adı"
+                placeholderTextColor="#5a6472"
+                value={matchForm.homeName}
+                onChangeText={(v) => setMatchForm((f) => ({ ...f, homeName: v }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Deplasman takım ID"
+                placeholderTextColor="#5a6472"
+                value={matchForm.awayTeamId}
+                onChangeText={(v) => setMatchForm((f) => ({ ...f, awayTeamId: v }))}
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Deplasman takım adı"
+                placeholderTextColor="#5a6472"
+                value={matchForm.awayName}
+                onChangeText={(v) => setMatchForm((f) => ({ ...f, awayName: v }))}
+              />
+            </>
+          )}
+
           <Pressable style={styles.saveButton} onPress={handleMatchSubmit} disabled={matchLoading}>
             <Text style={styles.saveButtonText}>{matchLoading ? 'Sorgulanıyor…' : 'Tahmin Al'}</Text>
           </Pressable>
@@ -401,5 +429,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     marginBottom: 10,
+  },
+  manualToggle: {
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  manualToggleText: {
+    color: '#3d8bfd',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

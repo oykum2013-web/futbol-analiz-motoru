@@ -1,4 +1,4 @@
-import type { BulletinResponse } from './types';
+import type { BulletinResponse, TeamsResponse } from './types';
 
 export class ApiError extends Error {
   status: number;
@@ -39,6 +39,10 @@ async function getJson<T>(baseUrl: string, path: string): Promise<T> {
 
 export function fetchBulletinDemo(baseUrl: string): Promise<BulletinResponse> {
   return getJson<BulletinResponse>(baseUrl, '/bulletin/demo');
+}
+
+export function fetchTeams(baseUrl: string, competition: string): Promise<TeamsResponse> {
+  return getJson<TeamsResponse>(baseUrl, `/teams?competition=${encodeURIComponent(competition)}`);
 }
 
 export type MatchQuery = {
