@@ -23,6 +23,7 @@ from typing import Optional
 
 import requests
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from . import main as pipeline
 from .agents.bulletin import to_bulletin_dict
@@ -34,6 +35,16 @@ app = FastAPI(
     title="Futbol Analiz Motoru — Ajan Ordusu API",
     description="n8n gibi orkestrasyon araçları için bülten/tahmin pipeline'ının HTTP sarmalayıcısı.",
     version="0.1.0",
+)
+
+# Tüm uç noktalar herkese açık, okuma amaçlı ve kimlik doğrulama gerektirmiyor
+# (hassas veri/oturum yok) — mobil uygulamanın web hedefi ve tarayıcıdan
+# yapılan geliştirme testleri için CORS'u herkese açık bırakmak güvenli.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
 )
 
 # Yapılandırma eksikliğinden (API anahtarı yok) kaynaklanan hatalar 400 (istemci

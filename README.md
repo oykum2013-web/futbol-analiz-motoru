@@ -19,12 +19,16 @@ analiz eden ve olasılık tabanlı tahmin üreten bir sistem.
 - **`n8n/`** — n8n'e import edilecek iki workflow tanımı (self-hosted: dosyaya yazar; n8n Cloud:
   e-posta ile gönderir), `api.py`'yi günlük tetikler (bkz. `n8n/README.md`)
 - **`index.html` + `api/matches.js`** — ayrı, mevcut basit JS/Vercel canlı skor arayüzü (ajan ordusundan bağımsız)
-- **`mobile/`** — Expo/React Native mobil uygulama iskeleti. Şu an yalnızca zorunlu
-  onboarding/sorumluluk reddi (disclaimer) akışını içerir: kullanıcı "bahis
-  tavsiyesi değildir, olasılık tabanlıdır, 18+" metnini kabul etmeden içeri
-  giremez (bkz. `mobile/src/screens/OnboardingScreen.tsx`,
-  `mobile/src/constants/legal.ts`). Ajan ordusu API'sine bağlanan gerçek
-  tahmin ekranları henüz eklenmedi.
+- **`mobile/`** — Expo/React Native mobil uygulama.
+  - Zorunlu onboarding/sorumluluk reddi (disclaimer) akışı: kullanıcı "bahis
+    tavsiyesi değildir, olasılık tabanlıdır, 18+" metnini kabul etmeden içeri
+    giremez (`src/screens/OnboardingScreen.tsx`, `src/constants/legal.ts`).
+  - Tahmin ekranı (`src/screens/PredictionScreen.tsx`) `ajan_ordusu/api.py`'ye
+    bağlanır: açılışta `/bulletin/demo`'yu çeker (açıkça DEMO etiketli),
+    eksik veri uyarılarını ve risk uyarısını olduğu gibi gösterir; "Gerçek Maç
+    Sorgula" bölümünden takım ID/adı girilerek `/match` uç noktası
+    sorgulanabilir. API adresi (⚙️ ikonu) cihazda kalıcı olarak ayarlanabilir
+    — fiziksel cihazdan test ederken bilgisayarın LAN IP'si gerekir.
 
 ## Veri bütünlüğü kuralı (kesin)
 

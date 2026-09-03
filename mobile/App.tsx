@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { TOS_STORAGE_KEY } from './src/constants/legal';
 import OnboardingScreen from './src/screens/OnboardingScreen';
-import HomeScreen from './src/screens/HomeScreen';
+import PredictionScreen from './src/screens/PredictionScreen';
 
 export default function App() {
   const [tosAccepted, setTosAccepted] = useState<boolean | null>(null);
@@ -27,7 +27,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       {tosAccepted ? (
-        <HomeScreen />
+        <PredictionScreen />
       ) : (
         <OnboardingScreen onAccept={handleAccept} />
       )}
