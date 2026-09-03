@@ -10,6 +10,7 @@ cd mobile
 npm install
 npx expo start          # QR kod / simülatör
 npx expo start --web    # tarayıcıda dene
+npm test                # Jest test paketi (api/client.ts, MatchCard renk haritası)
 ```
 
 ## Backend'e bağlanma
