@@ -1,8 +1,13 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BulletinMatchItem } from '../api/types';
 
 type Props = {
   match: BulletinMatchItem;
+  // true: gerekçe (form/H2H/kadro/piyasa kırılımı) kilitli gösterilir.
+  // Güven rozeti ve eksik-veri uyarısı bu ayardan etkilenmez — kullanıcıyı
+  // yanıltmamak için her zaman gösterilir (bkz. veri bütünlüğü kuralı).
+  restricted?: boolean;
+  onUpgradePress?: () => void;
 };
 
 const CONFIDENCE_COLORS: Record<string, string> = {
@@ -29,7 +34,7 @@ function ProbabilityBar({ label, percent }: { label: string; percent: number }) 
   );
 }
 
-export default function MatchCard({ match }: Props) {
+export default function MatchCard({ match, restricted = false, onUpgradePress }: Props) {
   const { prediction, data_gaps: dataGaps } = match;
   const badgeColor = confidenceColor(prediction.confidence);
 
@@ -60,14 +65,23 @@ export default function MatchCard({ match }: Props) {
         </View>
       )}
 
-      {prediction.rationale.length > 0 && (
-        <View style={styles.rationaleBox}>
-          {prediction.rationale.map((line) => (
-            <Text key={line} style={styles.rationaleText}>
-              • {line}
-            </Text>
-          ))}
-        </View>
+      {restricted ? (
+        <Pressable style={styles.lockedBox} onPress={onUpgradePress}>
+          <Text style={styles.lockedText}>
+            🔒 Detaylı gerekçe (form, H2H, kadro, piyasa kırılımı) Premium'da
+          </Text>
+          <Text style={styles.lockedLink}>Premium'a Geç</Text>
+        </Pressable>
+      ) : (
+        prediction.rationale.length > 0 && (
+          <View style={styles.rationaleBox}>
+            {prediction.rationale.map((line) => (
+              <Text key={line} style={styles.rationaleText}>
+                • {line}
+              </Text>
+            ))}
+          </View>
+        )
       )}
 
       <Text style={styles.disclaimer}>{prediction.disclaimer}</Text>
@@ -161,6 +175,22 @@ const styles = StyleSheet.create({
     color: '#8fa3c0',
     fontSize: 12,
     lineHeight: 17,
+  },
+  lockedBox: {
+    backgroundColor: '#141d2e',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  lockedText: {
+    color: '#8fa3c0',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  lockedLink: {
+    color: '#3d8bfd',
+    fontSize: 12,
+    fontWeight: '700',
   },
   disclaimer: {
     color: '#5a6472',

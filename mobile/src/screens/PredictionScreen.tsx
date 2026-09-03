@@ -12,7 +12,10 @@ import {
 import { ApiError, fetchBulletinDemo, fetchMatch } from '../api/client';
 import type { BulletinResponse } from '../api/types';
 import { useApiBaseUrl } from '../hooks/useApiBaseUrl';
+import { useDailyQueryLimit } from '../state/dailyUsage';
+import { useSubscription } from '../state/subscription';
 import MatchCard from '../components/MatchCard';
+import PaywallScreen from './PaywallScreen';
 
 const EMPTY_MATCH_FORM = {
   homeTeamId: '',
@@ -36,6 +39,10 @@ export default function PredictionScreen() {
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
   const [matchResult, setMatchResult] = useState<BulletinResponse | null>(null);
+
+  const { isPremium, purchase } = useSubscription();
+  const { remaining, limit, limitReached, recordUsage } = useDailyQueryLimit();
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     setBaseUrlDraft(baseUrl);
@@ -74,6 +81,10 @@ export default function PredictionScreen() {
       setMatchError('Tüm alanları doldurun.');
       return;
     }
+    if (!isPremium && limitReached) {
+      setShowPaywall(true);
+      return;
+    }
     setMatchLoading(true);
     setMatchError(null);
     setMatchResult(null);
@@ -85,6 +96,7 @@ export default function PredictionScreen() {
         awayName: awayName.trim(),
       });
       setMatchResult(data);
+      if (!isPremium) recordUsage();
     } catch (err) {
       setMatchError(err instanceof ApiError ? err.message : 'Bilinmeyen bir hata oluştu.');
     } finally {
@@ -103,6 +115,21 @@ export default function PredictionScreen() {
         <Pressable onPress={() => setShowSettings((prev) => !prev)} hitSlop={10}>
           <Text style={styles.settingsToggle}>⚙️</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.planRow}>
+        {isPremium ? (
+          <Text style={styles.planBadgePremium}>⭐ Premium</Text>
+        ) : (
+          <>
+            <Text style={styles.planBadgeFree}>
+              Ücretsiz plan: bugün {remaining}/{limit} gerçek maç sorgusu kaldı
+            </Text>
+            <Pressable onPress={() => setShowPaywall(true)} hitSlop={8}>
+              <Text style={styles.upgradeLink}>Yükselt</Text>
+            </Pressable>
+          </>
+        )}
       </View>
 
       {showSettings && (
@@ -210,10 +237,24 @@ export default function PredictionScreen() {
           )}
 
           {matchResult?.matches.map((match) => (
-            <MatchCard key={`${match.home.id}-${match.away.id}`} match={match} />
+            <MatchCard
+              key={`${match.home.id}-${match.away.id}`}
+              match={match}
+              restricted={!isPremium}
+              onUpgradePress={() => setShowPaywall(true)}
+            />
           ))}
         </View>
       )}
+
+      <PaywallScreen
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onPurchase={async () => {
+          await purchase();
+          setShowPaywall(false);
+        }}
+      />
     </ScrollView>
   );
 }
@@ -241,6 +282,28 @@ const styles = StyleSheet.create({
   },
   settingsToggle: {
     fontSize: 20,
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  planBadgePremium: {
+    color: '#f0c14b',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  planBadgeFree: {
+    color: '#8fa3c0',
+    fontSize: 12,
+    flex: 1,
+    marginRight: 8,
+  },
+  upgradeLink: {
+    color: '#3d8bfd',
+    fontSize: 12,
+    fontWeight: '700',
   },
   settingsBox: {
     backgroundColor: '#141d2e',
