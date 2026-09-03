@@ -10,15 +10,20 @@ type Props = {
   onUpgradePress?: () => void;
 };
 
-const CONFIDENCE_COLORS: Record<string, string> = {
+// Bu anahtarlar ajan_ordusu/agents/prediction.py'nin ürettiği tüm confidence
+// değerleriyle birebir eşleşmeli (bkz. api/__tests__ içindeki tutarlılık testi) —
+// eşleşmeyen bir değer sessizce "Yetersiz Veri" ile aynı nötr griye düşer, bu da
+// güven seviyesini yanlış iletir.
+export const CONFIDENCE_COLORS: Record<string, string> = {
   Yüksek: '#2e7d32',
+  'Orta-Yüksek': '#4f8a3d',
   Orta: '#c77b1a',
   Düşük: '#b3401f',
   'Çok Düşük': '#8a1f1f',
   'Yetersiz Veri': '#5a6472',
 };
 
-function confidenceColor(confidence: string): string {
+export function confidenceColor(confidence: string): string {
   return CONFIDENCE_COLORS[confidence] ?? '#5a6472';
 }
 
