@@ -140,8 +140,11 @@ def _safe_get_team_matches(client: FootballDataClient, team_id: str) -> list:
     verebiliyordu — bkz. proje geçmişi), açıkça son 365 günü istiyoruz.
     """
     date_from = (date.today() - timedelta(days=365)).isoformat()
+    date_to = date.today().isoformat()
     try:
-        return client.get_team_matches(int(team_id), status="FINISHED", limit=10, date_from=date_from)
+        return client.get_team_matches(
+            int(team_id), status="FINISHED", limit=10, date_from=date_from, date_to=date_to
+        )
     except requests.exceptions.RequestException as exc:
         logger.warning("Takım %s için maç verisi çekilemedi: %s", team_id, exc)
         return []

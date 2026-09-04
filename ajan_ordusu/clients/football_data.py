@@ -16,6 +16,7 @@ kullanıcı isteği, ücretsiz planın dakika limitini birlikte aşmaz.
 
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -81,6 +82,7 @@ class FootballDataClient:
         status: str = "FINISHED",
         limit: int = 10,
         date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Form Analiz Ajanı için: bir takımın geçmiş maçları (en yeni önce).
 
@@ -89,10 +91,17 @@ class FootballDataClient:
         yeni başladığı dönemlerde yanlışlıkla "hiç bitmiş maç yok" sonucu
         verebilir. Geçmişe dönük gerçek bir pencere garantilemek için
         çağıran taraf (main.py) açık bir `date_from` geçmelidir.
+
+        football-data.org v4, `dateFrom`'un mutlaka `dateTo` ile birlikte
+        gönderilmesini şart koşuyor — yalnızca `dateFrom` gönderilirse istek
+        400 ile reddedilir (bkz. proje geçmişi: bu yüzden form verisi
+        sessizce "veri yok" olarak raporlanıyordu). `date_from` verilip
+        `date_to` verilmezse bugüne kadar olan aralık varsayılır.
         """
         params: Dict[str, Any] = {"status": status, "limit": limit}
         if date_from:
             params["dateFrom"] = date_from
+            params["dateTo"] = date_to or datetime.now(timezone.utc).date().isoformat()
         data = self._get(f"/teams/{team_id}/matches", params=params)
         return data.get("matches", [])
 
