@@ -159,11 +159,21 @@ def match(
     away_name: str = Query("Deplasman"),
     season: int = Query(2025, description="API-Football sakatlık sorgusu için sezon yılı"),
     sport_key: Optional[str] = Query(None, description="The Odds API lig anahtarı"),
+    competition: Optional[str] = Query(
+        None,
+        description=(
+            "football-data.org lig kodu (ör. PL, BL1) — API-Football takım "
+            "ID'sini isimden çözerken ülkeye göre tekilleştirmek için kullanılır "
+            "(aynı isimli birden çok kulüp varsa yanlış takımın sakatlık "
+            "verisini göstermemek için)."
+        ),
+    ),
 ) -> dict:
     try:
         client = pipeline.FootballDataClient()
         report = pipeline._analyze_live_match(
-            client, home_team_id, away_team_id, home_name, away_name, season, sport_key
+            client, home_team_id, away_team_id, home_name, away_name, season, sport_key,
+            competition_code=competition,
         )
     except _CONFIG_ERRORS as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

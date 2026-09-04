@@ -52,6 +52,9 @@ export type MatchQuery = {
   awayName: string;
   season?: string;
   sportKey?: string;
+  // Seçilen lig kodu (ör. "PL") — sunucunun API-Football'da aynı isimli
+  // birden çok kulüp arasından doğru olanı seçebilmesi için (bkz. api.py).
+  competition?: string;
 };
 
 export function fetchMatch(baseUrl: string, query: MatchQuery): Promise<BulletinResponse> {
@@ -63,6 +66,7 @@ export function fetchMatch(baseUrl: string, query: MatchQuery): Promise<Bulletin
   });
   if (query.season) params.set('season', query.season);
   if (query.sportKey) params.set('sport_key', query.sportKey);
+  if (query.competition) params.set('competition', query.competition);
 
   return getJson<BulletinResponse>(baseUrl, `/match?${params.toString()}`);
 }

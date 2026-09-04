@@ -38,6 +38,7 @@ export default function PredictionScreen() {
   const [showMatchForm, setShowMatchForm] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [matchForm, setMatchForm] = useState(EMPTY_MATCH_FORM);
+  const [competition, setCompetition] = useState('PL');
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
   const [matchResult, setMatchResult] = useState<BulletinResponse | null>(null);
@@ -96,6 +97,7 @@ export default function PredictionScreen() {
         awayTeamId: awayTeamId.trim(),
         homeName: homeName.trim(),
         awayName: awayName.trim(),
+        competition,
       });
       setMatchResult(data);
       if (!isPremium) recordUsage();
@@ -206,6 +208,7 @@ export default function PredictionScreen() {
             onSelectAway={(team) =>
               setMatchForm((f) => ({ ...f, awayTeamId: String(team.id), awayName: team.name }))
             }
+            onCompetitionChange={setCompetition}
           />
 
           <Pressable

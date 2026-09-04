@@ -43,6 +43,35 @@ class ApiFootballClient:
         return response.json()
 
     def get_team_injuries(self, team_id: int, season: int) -> List[Dict[str, Any]]:
-        """Bir takımın belirli sezondaki güncel sakatlık/eksik oyuncu listesi."""
+        """Bir takımın belirli sezondaki güncel sakatlık/eksik oyuncu listesi.
+
+        DİKKAT: `team_id` burada API-Football'un KENDİ takım ID sistemine göre
+        olmalı — football-data.org'un ID'siyle KARIŞTIRILMAMALI. İki sağlayıcının
+        ID'leri farklı ve örtüşen sayılar tamamen farklı takımlara işaret
+        edebilir (ör. football-data.org'da 57 = Arsenal iken API-Football'da
+        57 = Ipswich). Doğru ID `find_team_id` ile takım adından çözülmeli.
+        """
         data = self._get("/injuries", params={"team": team_id, "season": season})
         return data.get("response", [])
+
+    def find_team_id(self, team_name: str, country: Optional[str] = None) -> Optional[int]:
+        """Takım adından API-Football'un kendi takım ID'sini bulur.
+
+        football-data.org'dan gelen sayısal takım ID'leri API-Football'un
+        ID sistemiyle ÖRTÜŞMEZ (iki farklı sağlayıcı, iki farklı ID uzayı) —
+        bu yüzden sakatlık sorgusundan önce isim üzerinden gerçek ID'yi burada
+        çözüyoruz. Aynı isimde birden fazla takım varsa (ör. dünyada birçok
+        "Arsenal" kulübü var) ve `country` ile tekilleştirilemiyorsa, yanlış
+        takımın verisini göstermemek için None döner — çağıran taraf bunu
+        "veri yok" olarak raporlamalı, asla bir tahminle devam etmemeli.
+        """
+        params: Dict[str, Any] = {"name": team_name}
+        if country:
+            params["country"] = country
+        data = self._get("/teams", params=params)
+        results = data.get("response", [])
+        if country:
+            results = [r for r in results if (r.get("team") or {}).get("country") == country]
+        if len(results) != 1:
+            return None
+        return (results[0].get("team") or {}).get("id")

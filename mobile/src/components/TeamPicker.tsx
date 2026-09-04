@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError, fetchTeams } from '../api/client';
 import type { TeamListItem } from '../api/types';
@@ -19,6 +19,7 @@ type Props = {
   selectedAway: Selected;
   onSelectHome: (team: TeamListItem) => void;
   onSelectAway: (team: TeamListItem) => void;
+  onCompetitionChange?: (code: string) => void;
 };
 
 function TeamChips({
@@ -50,11 +51,22 @@ function TeamChips({
   );
 }
 
-export default function TeamPicker({ baseUrl, selectedHome, selectedAway, onSelectHome, onSelectAway }: Props) {
+export default function TeamPicker({
+  baseUrl,
+  selectedHome,
+  selectedAway,
+  onSelectHome,
+  onSelectAway,
+  onCompetitionChange,
+}: Props) {
   const [competition, setCompetition] = useState('PL');
   const [teams, setTeams] = useState<TeamListItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    onCompetitionChange?.(competition);
+  }, [competition, onCompetitionChange]);
 
   const loadTeams = async () => {
     setLoading(true);

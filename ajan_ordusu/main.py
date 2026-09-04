@@ -98,13 +98,49 @@ def run_bulletin_demo() -> str:
     return DEMO_BANNER + bulletin
 
 
-def _fetch_missing_players(team_id: str, season: int):
-    """API_FOOTBALL_KEY tanımlıysa sakatlık/kadro verisini çeker; yoksa sessizce atlar (None)."""
+# football-data.org lig kodundan API-Football'un `country` alanına eşleme —
+# yalnızca tek-ülkeli (yurt içi) liglerde takım adını tekilleştirmek için.
+# CL/WC/EC gibi çok uluslu turnuvalarda güvenilir bir eşleme yok; bu durumda
+# ülke filtresi uygulanmaz (isim tek başına yeterince ayırt ediciyse yine de
+# çözülebilir, değilse dürüstçe "veri yok" raporlanır).
+_COMPETITION_COUNTRY = {
+    "PL": "England",
+    "ELC": "England",
+    "BL1": "Germany",
+    "PD": "Spain",
+    "SA": "Italy",
+    "FL1": "France",
+    "DED": "Netherlands",
+    "BSA": "Brazil",
+    "PPL": "Portugal",
+}
+
+
+def _fetch_missing_players(team_id: str, team_name: str, season: int, country: Optional[str] = None):
+    """API_FOOTBALL_KEY tanımlıysa sakatlık/kadro verisini çeker; yoksa sessizce atlar (None).
+
+    ÖNEMLİ: `team_id` football-data.org'un ID'sidir — API-Football'un KENDİ ID
+    sistemiyle örtüşmez (bkz. clients/api_football.py:find_team_id). Bu yüzden
+    önce takım adından API-Football'un gerçek ID'si çözülür; isim tekil bir
+    takıma karşılık gelmiyorsa (ör. birden çok ülkede aynı isimli kulüp varsa)
+    YANLIŞ bir takımın sakatlık verisini göstermemek için None döner — bu,
+    "veri yok" olarak dürüstçe raporlanır, asla tahmine dayalı bir eşleşmeyle
+    devam edilmez.
+    """
     try:
         client = ApiFootballClient()
     except ApiFootballClientError:
         return None
-    raw = client.get_team_injuries(int(team_id), season)
+    resolved_id = client.find_team_id(team_name, country=country)
+    if resolved_id is None:
+        logger.warning(
+            "API-Football'da '%s' (football-data.org id=%s) için tekil bir takım eşleşmesi bulunamadı — "
+            "sakatlık verisi atlanıyor.",
+            team_name,
+            team_id,
+        )
+        return None
+    raw = client.get_team_injuries(resolved_id, season)
     return normalize_api_football_injuries(raw)
 
 
@@ -158,6 +194,7 @@ def _analyze_live_match(
     away_name: str,
     season: int,
     sport_key: Optional[str] = None,
+    competition_code: Optional[str] = None,
 ) -> MatchAnalysisReport:
     home_team = TeamRef(id=home_team_id, name=home_name)
     away_team = TeamRef(id=away_team_id, name=away_name)
@@ -170,8 +207,9 @@ def _analyze_live_match(
     # H2H: iki takımın maç listelerinin birleşiminden ortak karşılaşmaları çıkar.
     h2h_matches = filter_h2h_matches(home_matches + away_matches, home_team_id, away_team_id)
 
-    home_missing = _fetch_missing_players(home_team_id, season)
-    away_missing = _fetch_missing_players(away_team_id, season)
+    country = _COMPETITION_COUNTRY.get(competition_code) if competition_code else None
+    home_missing = _fetch_missing_players(home_team_id, home_name, season, country=country)
+    away_missing = _fetch_missing_players(away_team_id, away_name, season, country=country)
     odds_quotes = _fetch_odds_quotes(sport_key, home_name, away_name) if sport_key else None
 
     return run_pipeline(
@@ -230,6 +268,7 @@ def build_bulletin_live_reports(
             away.get("name") or "?",
             season,
             sport_key,
+            competition_code=competition_code,
         )
         reports.append(report)
     return reports
